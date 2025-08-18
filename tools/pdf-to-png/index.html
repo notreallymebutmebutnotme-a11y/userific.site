@@ -3,11 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF to PNG Converter – Free, High Quality | Userific</title>
-  <meta name="description" content="Convert PDF to PNG online for free. High-quality, client-side PDF to image conversion. No upload required." />
-  <meta name="keywords" content="pdf to png, convert pdf, free pdf converter, pdf to image online, high quality pdf to png" />
+  <title>PDF to PNG Converter – Free, No Login, High Quality | Userific</title>
+  <meta name="description" content="Convert PDF to PNG images instantly, free and without login. High-quality, secure, and fast PDF to image converter – works directly in your browser." />
+  <meta name="keywords" content="pdf to png, pdf to image, convert pdf, free pdf to png, pdf converter no login, online pdf to png free, userific pdf" />
   <meta name="robots" content="index, follow" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Schema Markup for SEO -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "PDF to PNG Converter",
+    "url": "https://userific.xyz/tools/pdf-to-png/",
+    "applicationCategory": "UtilityApplication",
+    "operatingSystem": "All",
+    "description": "Convert PDF to PNG free, no login required. High-quality, fast and secure PDF to image conversion directly in your browser.",
+    "creator": {
+      "@type": "Organization",
+      "name": "Userific",
+      "url": "https://userific.xyz"
+    }
+  }
+  </script>
+
   <style>
     body {
       margin: 0;
@@ -168,7 +187,7 @@
   </header>
 
   <div class="container">
-    <h2>PDF to PNG Converter – Free & High Quality</h2>
+    <h2>PDF to PNG Converter – Free, No Login Required</h2>
     <p class="small">Convert PDF files into high-resolution PNG images. 100% client-side, no server upload required.</p>
 
     <div class="ad-box">Ads will show here</div>
@@ -218,11 +237,7 @@
     let currentImages = [];
 
     fileInput.addEventListener('change', () => {
-      if (fileInput.files.length) {
-        fileNameSpan.textContent = fileInput.files[0].name;
-      } else {
-        fileNameSpan.textContent = 'No file chosen';
-      }
+      fileNameSpan.textContent = fileInput.files.length ? fileInput.files[0].name : 'No file chosen';
     });
 
     function parsePageSelection(str, maxPage) {
@@ -337,4 +352,4 @@
     initDarkMode();
   </script>
 </body>
-</html>
+  </html>
