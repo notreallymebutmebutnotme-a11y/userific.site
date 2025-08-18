@@ -2,480 +2,143 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PDF to Video Tool</title>
-  <style>
-    body { font-family: sans-serif; padding:20px; background:#f9f9f9; }
-    .container { max-width: 700px; margin:auto; padding:20px; background:#fff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1);}
-    input, select, button { margin:10px 0; padding:10px; width:100%; }
-    #progress { margin-top:20px; padding:10px; background:#eee; border-radius:8px; }
-    canvas { display:none; }
-  </style>
+  <title>PDF + Audio → Video Tool</title>
 </head>
 <body>
-  <div class="container">
-    <h2>PDF to Video Tool</h2>
-    <label>Upload PDF:</label>
-    <input type="file" id="pdfInput" accept="application/pdf"/>
-    <label>Upload Audio (mp3/wav):</label>
-    <input type="file" id="audioInput" accept="audio/*"/>
-    <label>Choose Resolution:</label>
-    <select id="resolution">
-      <option value="1920x1080">1080p</option>
-      <option value="2560x1440">1440p</option>
-      <option value="3840x2160">4K</option>
-    </select>
-    <button id="processBtn">Process</button>
-    <button id="exportBtn">Export Video</button>
-    <div id="progress">Idle</div>
-  </div>
+  <h2>PDF + Audio to Video</h2>
+  <input type="file" id="pdfFile" accept="application/pdf" />
+  <input type="file" id="audioFile" accept="audio/*" />
+  <select id="resolution">
+    <option value="1080">1080p</option>
+    <option value="1440">1440p</option>
+    <option value="2160">4K</option>
+  </select>
+  <button id="processBtn">Process</button>
+  <button id="exportBtn">Export Video</button>
+  <div id="progress">Idle</div>
 
-  <canvas id="renderCanvas"></canvas>
-
+  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.4/dist/ffmpeg.min.js"></script>
+  <!-- Tesseract.js for OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
+  <!-- ffmpeg.wasm via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
 
   <script>
-    const pdfInput = document.getElementById('pdfInput');
-    const audioInput = document.getElementById('audioInput');
-    const processBtn = document.getElementById('processBtn');
-    const exportBtn = document.getElementById('exportBtn');
-    const progressEl = document.getElementById('progress');
-    const canvas = document.getElementById('renderCanvas');
-    const ctx = canvas.getContext('2d');
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({
+      log: true,
+      corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js"
+    });
 
-    let ffmpeg;
-    let pdfPages = [];
-    let audioFile;
-    let audioDuration = 0;
+    const progressEl = document.getElementById("progress");
+    const pdfInput = document.getElementById("pdfFile");
+    const audioInput = document.getElementById("audioFile");
+    const resInput = document.getElementById("resolution");
 
-    function updateProgress(msg){
+    let audioFile, pdfFile, audioWav, pdfPages = [];
+
+    function setProgress(msg) {
+      progressEl.textContent = msg;
       console.log(msg);
-      progressEl.innerText = msg;
     }
 
-    async function initFFmpeg() {
-      if(!ffmpeg){
-        updateProgress("Loading ffmpeg.wasm...");
-        ffmpeg = window.FFmpeg.createFFmpeg({ log: true });
+    async function loadFFmpeg() {
+      if (!ffmpeg.isLoaded()) {
+        setProgress("Loading ffmpeg.wasm core from CDN...");
         await ffmpeg.load();
-        updateProgress("ffmpeg ready");
+        setProgress("ffmpeg.wasm ready ✅");
       }
     }
 
-    async function convertAudio(file){
-      await initFFmpeg();
-      updateProgress("Converting audio to WAV...");
-      const data = new Uint8Array(await file.arrayBuffer());
-      ffmpeg.FS('writeFile','input',data);
-      await ffmpeg.run('-i','input','-ac','1','-ar','16000','output.wav');
-      const out = ffmpeg.FS('readFile','output.wav');
-      const blob = new Blob([out.buffer],{type:'audio/wav'});
-      const audio = document.createElement('audio');
-      audio.src = URL.createObjectURL(blob);
-      await audio.play().catch(()=>{}); // try to init
-      return new Promise(res=>{
-        audio.onloadedmetadata=()=>{
-          audioDuration = audio.duration;
-          res(blob);
-        };
-      });
-    }
+    async function processFiles() {
+      await loadFFmpeg();
 
-    async function renderPDF(file,resolution){
-      updateProgress("Rendering PDF pages...");
-      const pdfData = new Uint8Array(await file.arrayBuffer());
-      const pdfDoc = await pdfjsLib.getDocument({data: pdfData}).promise;
+      // convert audio to wav
+      audioFile = audioInput.files[0];
+      pdfFile = pdfInput.files[0];
+      if (!audioFile || !pdfFile) {
+        setProgress("Please upload both PDF and audio!");
+        return;
+      }
+
+      setProgress("Converting audio...");
+      ffmpeg.FS("writeFile", "input", await fetchFile(audioFile));
+      await ffmpeg.run("-i", "input", "-ar", "44100", "-ac", "2", "audio.wav");
+      audioWav = ffmpeg.FS("readFile", "audio.wav");
+      setProgress("Audio converted ✅");
+
+      // render PDF to canvases
+      const pdfData = await pdfFile.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
       pdfPages = [];
-      const [w,h] = resolution.split('x').map(Number);
-      canvas.width = w;
-      canvas.height = h;
-      for(let i=1;i<=pdfDoc.numPages;i++){
-        const page = await pdfDoc.getPage(i);
-        const viewport = page.getViewport({scale:2.0});
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = viewport.width;
-        tempCanvas.height = viewport.height;
-        await page.render({canvasContext: tempCanvas.getContext('2d'), viewport}).promise;
 
-        // draw scaled to 16:9 top fit
-        ctx.fillStyle="white";
-        ctx.fillRect(0,0,canvas.width,canvas.height);
-        const scale = Math.max(w/tempCanvas.width,h/tempCanvas.height);
-        const scaledW = tempCanvas.width*scale;
-        const scaledH = tempCanvas.height*scale;
-        ctx.drawImage(tempCanvas,0,0,scaledW,scaledH);
-        const imgBlob = await new Promise(r=>canvas.toBlob(r,'image/png'));
-        pdfPages.push(imgBlob);
+      for (let i = 1; i <= pdf.numPages; i++) {
+        setProgress(`Rendering page ${i}/${pdf.numPages}...`);
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
 
-        updateProgress(`Rendered page ${i}/${pdfDoc.numPages}`);
+        // OCR if page has no text
+        const textContent = await page.getTextContent();
+        if (textContent.items.length === 0) {
+          setProgress(`Running OCR on page ${i}...`);
+          await Tesseract.recognize(canvas, "eng");
+        }
+
+        pdfPages.push(canvas.toDataURL("image/png"));
       }
+
+      setProgress("PDF rendered ✅ Ready to export.");
     }
 
-    async function process(){
-      if(!pdfInput.files[0]||!audioInput.files[0]){
-        alert("Upload both PDF and Audio first"); return;
+    async function exportVideo() {
+      if (!pdfPages.length || !audioWav) {
+        setProgress("Please process files first!");
+        return;
       }
-      audioFile = await convertAudio(audioInput.files[0]);
-      await renderPDF(pdfInput.files[0],document.getElementById('resolution').value);
-      updateProgress("Processing complete. Ready to export.");
-    }
+      await loadFFmpeg();
 
-    async function exportVideo(){
-      if(!pdfPages.length||!audioFile){alert("Run process first");return;}
-      await initFFmpeg();
-      updateProgress("Encoding video...");
-
-      // write input audio
-      ffmpeg.FS('writeFile','audio.wav', new Uint8Array(await audioFile.arrayBuffer()));
-
-      const [w,h] = document.getElementById('resolution').value.split('x');
+      const res = parseInt(resInput.value);
+      const height = res;
+      const width = Math.floor((16 / 9) * height);
+      const pageDuration = 5; // seconds per page for demo
       const fps = 30;
-      const perPage = audioDuration / pdfPages.length;
 
-      // write images
-      let idx=1;
-      for(const blob of pdfPages){
-        const data = new Uint8Array(await blob.arrayBuffer());
-        ffmpeg.FS('writeFile',`img${idx}.png`,data);
-        idx++;
-      }
+      setProgress("Creating frames...");
+      pdfPages.forEach((imgData, i) => {
+        const img = atob(imgData.split(",")[1]);
+        const buf = new Uint8Array(img.length);
+        for (let j = 0; j < img.length; j++) buf[j] = img.charCodeAt(j);
+        ffmpeg.FS("writeFile", `page${i}.png`, buf);
+      });
 
-      // concat script: loop each image for perPage seconds
-      let filter = "";
-      for(let i=1;i<=pdfPages.length;i++){
-        filter += `[${i-1}:v]format=rgba,fade=t=in:st=0:d=1:alpha=1,fade=t=out:st=${perPage-1}:d=1:alpha=1,setpts=PTS-STARTPTS+${(i-1)*perPage}/TB[v${i}];`;
-      }
-      for(let i=1;i<=pdfPages.length;i++) filter += `[v${i}]`;
-      filter += `concat=n=${pdfPages.length}:v=1:a=0,format=yuv420p[v]`;
-
-      const inputs = [];
-      for(let i=1;i<=pdfPages.length;i++) inputs.push('-loop','1','-t',perPage.toString(),'-i',`img${i}.png`);
-
+      setProgress("Encoding video...");
       await ffmpeg.run(
-        ...inputs,
-        '-i','audio.wav',
-        '-filter_complex', filter,
-        '-map','[v]','-map',`${pdfPages.length}:a`,
-        '-s',`${w}x${h}`,
-        '-r',fps.toString(),
-        'out.mp4'
+        "-framerate", String(fps),
+        "-i", "page%d.png",
+        "-i", "audio.wav",
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-s", `${width}x${height}`,
+        "out.mp4"
       );
 
-      const out = ffmpeg.FS('readFile','out.mp4');
-      const url = URL.createObjectURL(new Blob([out.buffer],{type:'video/mp4'}));
-      const a = document.createElement('a');
-      a.href=url;a.download='output.mp4';a.click();
-      updateProgress("Export complete. Video downloaded.");
+      const data = ffmpeg.FS("readFile", "out.mp4");
+      const url = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "output.mp4";
+      a.click();
+      setProgress("Export complete ✅");
     }
 
-    processBtn.onclick = process;
-    exportBtn.onclick = exportVideo;
+    document.getElementById("processBtn").onclick = processFiles;
+    document.getElementById("exportBtn").onclick = exportVideo;
   </script>
 </body>
 </html>
-  </main>
-  <footer>
-    <div>Notes: 100% client‑side. If a PDF page lacks text, the app will OCR it (English). Matching uses transcript timestamps + fuzzy keyword overlap with each page’s extracted text. Pages are shown full‑screen 16:9 <em>filled from the top</em> (top‑aligned cover). Rendering target: H.264 MP4 at 30fps with simple fade‑in/fade‑out transitions. Work continues when tab is backgrounded (Web Worker). If you close the tab or the browser kills the worker, progress checkpoints let you resume later. The tool auto‑converts uploaded audio to mono 16k WAV for analysis and uses it for final render.</div>
-  </footer><script>
-// ------------------ UI helpers ------------------
-const $ = (id)=>document.getElementById(id);
-function log(msg){ const el=$("log"); el.textContent += `\n${new Date().toLocaleTimeString()} — ${msg}`; el.scrollTop=el.scrollHeight; }
-function setProgress(p){ $("progressBar").style.width = Math.max(0, Math.min(100, p)) + "%"; }
-
-$("sttEngine").addEventListener('change', e=>{ $("apiBox").style.display = e.target.value === 'whisper' ? 'block' : 'none'; });
-
-// Resume data
-const CK = { save:(k,v)=>localStorage.setItem(k, JSON.stringify(v)), load:(k,d=null)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}, del:(k)=>localStorage.removeItem(k) };
-
-// ------------------ Heavy libs (ffmpeg) on main for audio convert ------------------
-const { createFFmpeg, fetchFile } = FFmpeg;
-const ffmpeg = createFFmpeg({ log: false });
-async function ensureFFmpeg(){ if(!ffmpeg.isLoaded()) { log('Loading ffmpeg.wasm… (first run is heavy)'); await ffmpeg.load(); } }
-
-async function convertAudioToWav(file){
-  await ensureFFmpeg();
-  const data = await fetchFile(file);
-  await ffmpeg.FS('writeFile', 'in', data);
-  // Convert to mono 16k WAV for STT and rendering
-  await ffmpeg.run('-i','in','-ac','1','-ar','16000','out.wav');
-  const out = ffmpeg.FS('readFile','out.wav');
-  return out.buffer;
-}
-
-// ------------------ Worker for PDF/STT/ALIGN/RENDER ------------------
-const workerCode = `
-self.onmessage = async (e)=>{
-  const {type, payload} = e.data;
-  try{
-    if(type==='PDF_RENDER'){ const out = await renderPdfToImages(payload); post({type:'PDF_RENDER_DONE', payload: out}); }
-    if(type==='EXTRACT_TEXT'){ const out = await extractTextFromPdf(payload); post({type:'EXTRACT_TEXT_DONE', payload: out}); }
-    if(type==='OCR_PAGES'){ const out = await ocrMissing(payload); post({type:'OCR_PAGES_DONE', payload: out}); }
-    if(type==='TRANSCRIBE'){ const out = await transcribeAudio(payload); post({type:'TRANSCRIBE_DONE', payload: out}); }
-    if(type==='ALIGN'){ const out = await alignPages(payload); post({type:'ALIGN_DONE', payload: out}); }
-    if(type==='RENDER_VIDEO'){ const out = await renderVideo(payload); post({type:'RENDER_VIDEO_DONE', payload: out}); }
-  }catch(err){ post({type:'ERROR', payload:String(err && err.message || err)}) }
-};
-const post = (m)=>self.postMessage(m);
-
-async function renderPdfToImages({pdfArray, width, height}){
-  const pdf = await pdfjsLib.getDocument({data: pdfArray}).promise;
-  const pages = [];
-  for(let p=1;p<=pdf.numPages;p++){
-    const page = await pdf.getPage(p);
-    const viewport = page.getViewport({scale: 2});
-    const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-    const ctx = canvas.getContext('2d');
-    await page.render({canvasContext: ctx, viewport}).promise;
-    // Fit to 16:9 cover, top-aligned
-    const finalCanvas = new OffscreenCanvas(width, height);
-    const fctx = finalCanvas.getContext('2d');
-    fctx.fillStyle = '#000'; fctx.fillRect(0,0,width,height);
-    const ratio = Math.max(width/canvas.width, height/canvas.height);
-    const drawW = Math.ceil(canvas.width * ratio);
-    const drawH = Math.ceil(canvas.height * ratio);
-    const dx = Math.floor((width - drawW)/2); // center X
-    const dy = 0; // top aligned Y
-    fctx.drawImage(canvas, dx, dy, drawW, drawH);
-    const blob = await finalCanvas.convertToBlob({type:'image/png'});
-    const buf = await blob.arrayBuffer();
-    pages.push({ index:p-1, png: new Uint8Array(buf) });
-    post({type:'PDF_RENDER_PROGRESS', payload: Math.round((p/pdf.numPages)*100)});
-  }
-  return {pages, pageCount: pages.length};
-}
-
-async function extractTextFromPdf({pdfArray}){
-  const pdf = await pdfjsLib.getDocument({data: pdfArray}).promise;
-  const texts = [];
-  for(let p=1;p<=pdf.numPages;p++){
-    const page = await pdf.getPage(p);
-    const content = await page.getTextContent().catch(()=>({items:[]}));
-    const text = (content.items||[]).map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
-    texts.push(text);
-    post({type:'TEXT_PROGRESS', payload: Math.round((p/pdf.numPages)*100)});
-  }
-  return {texts};
-}
-
-async function ocrMissing({pagePngs, pageTexts}){
-  const outTexts = [...pageTexts];
-  for(let i=0;i<pagePngs.length;i++){
-    if(outTexts[i] && outTexts[i].length>10) continue;
-    const png = pagePngs[i].png;
-    const blob = new Blob([png], {type:'image/png'});
-    const { data: { text } } = await Tesseract.recognize(blob, 'eng', { logger: m=>{ if(m.status==='recognizing text'){ post({type:'OCR_PROGRESS', payload: Math.round((i/pagePngs.length)*100)}) }}});
-    outTexts[i] = (text||'').replace(/\s+/g,' ').trim();
-  }
-  return {texts: outTexts};
-}
-
-function tokenize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean); }
-function jaccard(a,b){ const A=new Set(a), B=new Set(b); const inter=[...A].filter(x=>B.has(x)).length; const uni = new Set([...A,...B]).size; return uni? inter/uni : 0; }
-
-async function alignPages({pageTexts, transcriptSegments}){
-  const pageTokens = pageTexts.map(txt=> tokenize(txt));
-  const sim = transcriptSegments.map(seg=> pageTokens.map(pt=> jaccard(tokenize(seg.text), pt)));
-  const assignments = [];
-  let lastPage = 0;
-  for(let i=0;i<sim.length;i++){
-    const row = sim[i];
-    let bestIdx = lastPage; let best = -1;
-    for(let p=lastPage;p<row.length;p++){ if(row[p]>best){ best=row[p]; bestIdx=p; } }
-    assignments.push({seg:i, page:bestIdx, score:best});
-    lastPage = Math.min(bestIdx+1, pageTokens.length-1);
-  }
-  const pageTimes = Array(pageTokens.length).fill(null).map(()=>({t0:null,t1:null}));
-  for(const a of assignments){
-    const s = transcriptSegments[a.seg];
-    const P = pageTimes[a.page];
-    P.t0 = (P.t0==null)? s.t0 : Math.min(P.t0, s.t0);
-    P.t1 = (P.t1==null)? s.t1 : Math.max(P.t1, s.t1);
-  }
-  let lastEnd = 0;
-  for(let p=0;p<pageTimes.length;p++){
-    const cur = pageTimes[p];
-    if(cur.t0==null){ cur.t0 = lastEnd; cur.t1 = lastEnd + 2; }
-    if(cur.t0 < lastEnd) cur.t0 = lastEnd;
-    if(cur.t1 <= cur.t0) cur.t1 = cur.t0 + 2;
-    lastEnd = cur.t1;
-  }
-  return {pageTimes, assignments};
-}
-
-async function transcribeAudio({engine, wavArray, apiUrl, apiKey}){
-  if(engine==='whisper'){
-    const form = new FormData();
-    const blob = new Blob([wavArray], {type:'audio/wav'});
-    form.append('file', blob, 'audio.wav');
-    form.append('model', 'whisper-1');
-    form.append('response_format', 'verbose_json');
-    const res = await fetch(apiUrl, {method:'POST', headers:{'Authorization':`Bearer ${apiKey}`}, body: form});
-    if(!res.ok) throw new Error('API transcription failed: '+res.status);
-    const data = await res.json();
-    const segments = (data.segments||[]).map(s=>({ t0: s.start ?? 0, t1: s.end ?? (s.start+2), text: (s.text||'').toLowerCase() }));
-    return {segments};
-  } else {
-    const MODEL_URL = 'https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip';
-    const { Vosk } = self.vosk;
-    const recognizer = await Vosk.createRecognizer(MODEL_URL, 16000);
-    // wavArray expected mono 16k PCM WAV
-    function parseWavPCM16(arrayBuffer){
-      const dv = new DataView(arrayBuffer);
-      if(dv.getUint32(0,true)!==0x46464952) throw new Error('Not RIFF');
-      let pos = 12; let sampleRate=16000; let dataPos=0; let dataLen=0; let fmtFound=false; let bits=16; let ch=1;
-      while(pos < dv.byteLength-8){
-        const id = dv.getUint32(pos, false); pos+=4;
-        const len = dv.getUint32(pos, true); pos+=4;
-        if(id === 0x666d7420){ // 'fmt '
-          fmtFound=true; const audioFmt = dv.getUint16(pos, true); ch = dv.getUint16(pos+2,true); sampleRate = dv.getUint32(pos+4,true); bits = dv.getUint16(pos+14,true);
-          if(audioFmt!==1 || bits!==16) throw new Error('Need PCM16 WAV');
-          if(ch!==1) throw new Error('Use mono WAV');
-        } else if(id === 0x64617461){ // 'data'
-          dataPos = pos; dataLen = len; break;
-        }
-        pos += len;
-      }
-      return { sampleRate, pcm: new Int16Array(arrayBuffer, dataPos, dataLen/2) };
-    }
-    const { sampleRate, pcm } = parseWavPCM16(wavArray);
-    if(sampleRate!==16000) throw new Error('Expected 16k wav for Vosk');
-    recognizer.acceptWaveform(pcm);
-    const result = recognizer.result();
-    const words = result.words || [];
-    const segments = [];
-    let cur = {t0:null, t1:null, text:''};
-    for(const w of words){
-      if(cur.t0===null){ cur.t0 = w.start; cur.t1 = w.end; cur.text = w.word; }
-      else if(w.start - cur.t1 > 0.8){ segments.push({...cur, text:cur.text.toLowerCase()}); cur = {t0:w.start, t1:w.end, text:w.word}; }
-      else { cur.t1 = w.end; cur.text += ' ' + w.word; }
-    }
-    if(cur.t0!==null) segments.push({...cur, text:cur.text.toLowerCase()});
-    return {segments};
-  }
-}
-
-async function renderVideo({images, audioWavArray, width, height, fps, pageTimes}){
-  const { createFFmpeg } = FFmpeg;
-  const ffmpeg = createFFmpeg({ log: true });
-  await ffmpeg.load();
-  await ffmpeg.FS('writeFile', 'audio.wav', new Uint8Array(audioWavArray));
-  for(let i=0;i<images.length;i++){
-    await ffmpeg.FS('writeFile', `page_${String(i+1).padStart(3,'0')}.png`, images[i].png);
-  }
-  // Build per-image durations
-  const durations = pageTimes.map(pt=> Math.max(0.4, pt.t1 - pt.t0));
-  // Build inputs & filter with fade in/out per page, then concat
-  let inputs = '';
-  let filters = '';
-  for(let i=0;i<images.length;i++){
-    const dur = durations[i];
-    inputs += `-loop 1 -t ${dur.toFixed(3)} -i page_${String(i+1).padStart(3,'0')}.png `;
-    const fadeDur = Math.min(0.5, Math.max(0.2, dur/4));
-    const outLabel = `v${i}`;
-    filters += `[${i}:v]format=rgba,fade=t=in:st=0:d=${fadeDur}:alpha=1,fade=t=out:st=${(dur-fadeDur).toFixed(3)}:d=${fadeDur}:alpha=1,setsar=1[${outLabel}];`;
-  }
-  const concatLabels = images.map((_,i)=>`[v${i}]`).join('');
-  const filterComplex = `${filters}${concatLabels}concat=n=${images.length}:v=1:a=0,format=yuv420p[v]`;
-
-  const args = inputs.trim().split(/\s+/).concat([
-    '-i','audio.wav',
-    '-filter_complex', filterComplex,
-    '-map','[v]','-map',`${images.length}:a`,
-    '-s', `${width}x${height}`,
-    '-r', String(fps),
-    '-c:v','libx264','-pix_fmt','yuv420p','-profile:v','high','-crf','20','-preset','veryfast',
-    '-c:a','aac','-b:a','192k','-shortest','out.mp4'
-  ]);
-
-  await ffmpeg.run(...args);
-  const data = ffmpeg.FS('readFile', 'out.mp4');
-  return {mp4: data};
-}
-`;
-
-const worker = new Worker(URL.createObjectURL(new Blob([workerCode], {type:'application/javascript'})));
-
-worker.onmessage = (e)=>{
-  const {type, payload} = e.data;
-  if(type==='ERROR'){ log('❌ ' + payload); }
-  if(type==='PDF_RENDER_PROGRESS'){ setProgress(10 + Math.floor(payload*0.15)); }
-  if(type==='TEXT_PROGRESS'){ setProgress(25 + Math.floor(payload*0.1)); }
-  if(type==='OCR_PROGRESS'){ setProgress(35 + Math.floor(payload*0.15)); }
-  if(type==='PDF_RENDER_DONE'){
-    window._renderedPages = payload.pages; window._pageCount = payload.pageCount;
-    log(`Rendered ${payload.pageCount} pages to 16:9 images.`);
-    const thumbs = $("thumbs"); thumbs.innerHTML='';
-    payload.pages.forEach((p,i)=>{ const img = new Image(); img.src = URL.createObjectURL(new Blob([p.png],{type:'image/png'})); const c = document.createElement('canvas'); const ctx=c.getContext('2d'); img.onload=()=>{ c.width=240; c.height=Math.round(240*9/16); ctx.drawImage(img,0,0,c.width,c.height); }; thumbs.appendChild(c); });
-  }
-  if(type==='EXTRACT_TEXT_DONE'){ window._pageTexts = payload.texts; log('Extracted PDF text.'); }
-  if(type==='OCR_PAGES_DONE'){ window._pageTexts = payload.texts; log('OCR completed for image-only pages.'); }
-  if(type==='TRANSCRIBE_DONE'){ window._segments = payload.segments; log(`Transcribed audio into ${payload.segments.length} segments.`); }
-  if(type==='ALIGN_DONE'){
-    window._pageTimes = payload.pageTimes; window._assignments = payload.assignments; log('Aligned transcript to pages.');
-  }
-  if(type==='RENDER_VIDEO_DONE'){
-    const blob = new Blob([payload.mp4], {type:'video/mp4'});
-    const url = URL.createObjectURL(blob);
-    const a = $("downloadLink"); a.href = url; a.download = 'slideshow.mp4'; a.style.display='inline-block';
-    log('✅ Rendering complete with fades.');
-    setProgress(100);
-  }
-};
-
-async function fileToArrayBuffer(file){ return await file.arrayBuffer(); }
-
-$("startBtn").addEventListener('click', async ()=>{
-  const pdf = $("pdfFile").files[0];
-  const audio = $("audioFile").files[0];
-  if(!pdf || !audio){ alert('Please choose both a PDF and an audio file.'); return; }
-  const [w,h] = $("resolution").value.split('x').map(Number);
-  const fps = parseInt($("fps").value,10);
-  const sttEngine = $("sttEngine").value;
-  const apiUrl = $("apiUrl").value.trim();
-  const apiKey = $("apiKey").value.trim();
-
-  setProgress(0); log('Loading files…');
-  const [pdfArrayBuf, audioBuf] = await Promise.all([fileToArrayBuffer(pdf), fileToArrayBuffer(audio)]);
-  CK.save('lastSession', { ts: Date.now(), pdfName: pdf.name, audioName: audio.name, res: [w,h], fps, sttEngine });
-
-  // Convert audio to mono 16k WAV for STT + render
-  log('Converting audio to WAV (mono 16k)…');
-  const wavArrayBuf = await convertAudioToWav(new Blob([audioBuf]));
-
-  // 1) Render pages to 16:9 top-aligned images
-  log('Rendering PDF pages to 16:9 canvases…');
-  worker.postMessage({type:'PDF_RENDER', payload:{ pdfArray: pdfArrayBuf, width:w, height:h }});
-
-  // 2) Extract text
-  log('Extracting embedded PDF text…');
-  worker.postMessage({type:'EXTRACT_TEXT', payload:{ pdfArray: pdfArrayBuf }});
-
-  // 3) Transcribe audio
-  log('Transcribing audio…');
-  worker.postMessage({type:'TRANSCRIBE', payload:{ engine: sttEngine, wavArray: wavArrayBuf, apiUrl, apiKey }});
-
-  // Wait until pages, texts, segments ready
-  const waitFor = (cond)=> new Promise(res=>{ const t=setInterval(()=>{ if(cond()){ clearInterval(t); res(); } }, 400); });
-  await waitFor(()=> window._renderedPages && window._pageTexts && window._segments);
-  setProgress(65);
-
-  // 4) OCR missing
-  log('Running OCR for pages lacking text…');
-  worker.postMessage({type:'OCR_PAGES', payload:{ pagePngs: window._renderedPages, pageTexts: window._pageTexts }});
-  await waitFor(()=> window._pageTexts && window._pageTexts.every(t=> typeof t==='string'));
-  setProgress(78);
-
-  // 5) Align
-  log('Aligning transcript segments to pages…');
-  worker.postMessage({type:'ALIGN', payload:{ pageTexts: window._pageTexts, transcriptSegments: window._segments }});
-  await waitFor(()=> window._pageTimes);
-  setProgress(86);
-
-  // 6) Render MP4 with fades
-  log('Rendering MP4 with fade transitions (this is compute heavy)…');
-  worker.postMessage({type:'RENDER_VIDEO', payload:{ images: window._renderedPages, audioWavArray: wavArrayBuf, width:w, height:h, fps, pageTimes: window._pageTimes }});
-});
-</script></body>
-  </html>
