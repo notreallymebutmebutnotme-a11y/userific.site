@@ -1,100 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF to PNG Converter – Free, High Quality Online Tool | Userific</title>
-  <meta name="description" content="Convert PDF to PNG free online. Fast, high-quality PDF to image conversion. Extract pages from PDF as PNG images without uploading to a server.">
-  <meta name="keywords" content="pdf to png, pdf to image, convert pdf to png, online pdf to png converter, free pdf image converter, high quality pdf to png, pdf page to png">
-  <meta name="robots" content="index, follow">
-  <link rel="stylesheet" href="../../assets/css/base.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF to PNG Converter – Free, High Quality | Userific</title>
+  <meta name="description" content="Convert PDF to PNG online for free. High-quality, client-side PDF to image conversion. No upload required." />
+  <meta name="keywords" content="pdf to png, convert pdf, free pdf converter, pdf to image online, high quality pdf to png" />
+  <meta name="robots" content="index, follow" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      margin:0;
-      font-family:'Poppins',sans-serif;
-      background:linear-gradient(135deg,#f8f9fa,#e9ecef);
-      color:#111;
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #fdfdfd, #f1f1f1);
+      color: #111;
     }
     body.dark-mode {
-      background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-      color:#eee;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #eee;
     }
     header {
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      padding:20px 24px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 20px;
     }
     header h1 {
-      margin:0;
-      font-size:1.8rem;
-      line-height:1.2;
+      margin: 0;
+      font-size: 1.6rem;
     }
     header h1 a {
-      text-decoration:none;
-      color:inherit;
+      color: inherit;
+      text-decoration: none;
     }
     .tagline {
-      font-size:0.9rem;
-      opacity:0.75;
-      margin-top:4px;
+      font-size: 0.9rem;
+      opacity: 0.75;
+      margin-top: 2px;
     }
     .toggle-dark {
-      cursor:pointer;
-      font-size:1.4rem;
-      user-select:none;
-      margin-top:6px;
+      cursor: pointer;
+      font-size: 1.4rem;
+      user-select: none;
     }
-    .toggle-dark:hover {text-decoration:none;}
+    .toggle-dark:hover {
+      text-decoration: none;
+    }
     .container {
-      max-width:900px;
-      margin:0 auto;
-      padding:40px 20px;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: center;
     }
-    h2 {margin-top:0;}
-    input[type=number], input[type=text] {
-      padding:8px;
-      border-radius:8px;
-      border:1px solid #ccc;
-      font-size:1rem;
+    h2 {
+      margin-top: 0;
     }
-    .hidden-input {display:none;}
+    .hidden-input {
+      display: none;
+    }
     .custom-file-label {
-      display:inline-block;
-      padding:10px 16px;
-      border-radius:8px;
-      background:#007bff;
-      color:#fff;
-      font-weight:600;
-      cursor:pointer;
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 8px;
+      background: #007bff;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 10px;
     }
     .file-name {
-      margin-left:10px;
-      font-size:0.9rem;
-      color:inherit;
+      margin-left: 10px;
+      font-size: 0.9rem;
+      color: inherit;
+    }
+    input[type=number], input[type=text] {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      margin: 0 6px;
     }
     button {
-      padding:10px 16px;
-      border-radius:8px;
-      border:0;
-      background:#007bff;
-      color:#fff;
-      font-weight:600;
-      cursor:pointer;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 0;
+      background: #007bff;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      margin: 6px;
     }
-    button:disabled {opacity:.45;cursor:not-allowed;}
-    .controls {display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:20px 0;}
-    .page-list{margin-top:12px;display:grid;gap:12px;}
-    .page-item{display:flex;gap:12px;align-items:center;}
-    canvas{border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.06);max-width:220px}
-    .meta{font-size:13px}
-    .small{font-size:13px;opacity:0.85}
-    a.link{display:inline-block;padding:6px 8px;background:#eef4ff;border-radius:6px;text-decoration:none;color:#064c9b}
-    footer{text-align:center;font-size:0.9rem;margin:50px 0 20px;}
-    footer a{margin:0 10px;color:inherit;text-decoration:none;}
-    footer a:hover{text-decoration:underline;}
-    .ad-box{margin:20px 0;padding:12px;text-align:center;border:1px dashed #ccc;border-radius:12px;color:#888;font-size:0.9rem;}
-    body.dark-mode .ad-box{border-color:#555;color:#aaa;}
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+    .controls {
+      margin: 20px 0;
+    }
+    .page-list {
+      margin-top: 20px;
+      display: grid;
+      gap: 16px;
+      justify-content: center;
+    }
+    .page-item {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      border-radius: 6px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      max-width: 220px;
+    }
+    .meta {
+      font-size: 13px;
+    }
+    .small {
+      font-size: 13px;
+      opacity: 0.85;
+    }
+    a.link {
+      display: inline-block;
+      padding: 6px 8px;
+      background: #eef4ff;
+      border-radius: 6px;
+      text-decoration: none;
+      color: #064c9b;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      margin: 50px 0 20px;
+    }
+    footer a {
+      margin: 0 10px;
+      color: inherit;
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+    .ad-box {
+      margin: 20px auto;
+      padding: 12px;
+      text-align: center;
+      border: 1px dashed #ccc;
+      border-radius: 12px;
+      color: #888;
+      font-size: 0.9rem;
+      max-width: 600px;
+    }
+    body.dark-mode .ad-box {
+      border-color: #555;
+      color: #aaa;
+    }
   </style>
 </head>
 <body>
@@ -114,11 +175,12 @@
 
     <div class="controls">
       <label class="custom-file-label" for="file">Choose PDF</label>
-      <input id="file" type="file" class="hidden-input" accept="application/pdf">
+      <input id="file" type="file" class="hidden-input" accept="application/pdf" />
       <span class="file-name" id="file-name">No file chosen</span>
-
-      <label>Scale: <input id="scale" type="number" value="2" min="0.5" step="0.5" style="width:80px;margin-left:6px" /></label>
-      <label>Pages: <input id="pages" type="text" placeholder="e.g. 1-3,5" style="width:160px;margin-left:6px" /></label>
+      <br/>
+      <label>Scale: <input id="scale" type="number" value="2" min="0.5" step="0.5" /></label>
+      <label>Pages: <input id="pages" type="text" placeholder="e.g. 1-3,5" /></label>
+      <br/>
       <button id="convert">Convert</button>
       <button id="downloadAll" disabled>Download All (ZIP)</button>
     </div>
@@ -141,7 +203,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
@@ -156,33 +217,33 @@
 
     let currentImages = [];
 
-    fileInput.addEventListener('change',()=>{
-      if(fileInput.files.length){
-        fileNameSpan.textContent=fileInput.files[0].name;
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) {
+        fileNameSpan.textContent = fileInput.files[0].name;
       } else {
-        fileNameSpan.textContent='No file chosen';
+        fileNameSpan.textContent = 'No file chosen';
       }
     });
 
     function parsePageSelection(str, maxPage) {
-      if (!str) return Array.from({length: maxPage}, (_,i)=>i+1);
-      const parts = str.split(',').map(s=>s.trim()).filter(Boolean);
+      if (!str) return Array.from({ length: maxPage }, (_, i) => i + 1);
+      const parts = str.split(',').map(s => s.trim()).filter(Boolean);
       const set = new Set();
       for (const p of parts) {
         if (p.includes('-')) {
-          const [a,b] = p.split('-').map(Number);
+          const [a, b] = p.split('-').map(Number);
           if (Number.isFinite(a) && Number.isFinite(b)) {
-            for (let i=Math.max(1,a); i<=Math.min(b,maxPage); i++) set.add(i);
+            for (let i = Math.max(1, a); i <= Math.min(b, maxPage); i++) set.add(i);
           }
         } else {
           const n = Number(p);
-          if (Number.isFinite(n) && n>=1 && n<=maxPage) set.add(n);
+          if (Number.isFinite(n) && n >= 1 && n <= maxPage) set.add(n);
         }
       }
-      return Array.from(set).sort((a,b)=>a-b);
+      return Array.from(set).sort((a, b) => a - b);
     }
 
-    convertBtn.addEventListener('click', async ()=>{
+    convertBtn.addEventListener('click', async () => {
       const file = fileInput.files && fileInput.files[0];
       if (!file) { alert('Please pick a PDF file.'); return; }
 
@@ -193,7 +254,7 @@
       status.textContent = 'Loading PDF...';
 
       const arrayBuffer = await file.arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
       try {
         const pdf = await loadingTask.promise;
         const numPages = pdf.numPages;
@@ -206,17 +267,17 @@
         for (const pageNum of pageList) {
           status.textContent = `Rendering page ${pageNum} of ${numPages}...`;
           const page = await pdf.getPage(pageNum);
-          const viewport = page.getViewport({scale: 1});
+          const viewport = page.getViewport({ scale: 1 });
           const canvas = document.createElement('canvas');
           const context = canvas.getContext('2d');
           canvas.width = Math.floor(viewport.width * scale);
           canvas.height = Math.floor(viewport.height * scale);
-          const renderContext = {canvasContext: context, viewport: page.getViewport({scale})};
+          const renderContext = { canvasContext: context, viewport: page.getViewport({ scale }) };
           await page.render(renderContext).promise;
 
           const dataUrl = canvas.toDataURL('image/png');
           const blob = (await (await fetch(dataUrl)).blob());
-          const fileName = `${file.name.replace(/\.pdf$/i,'')}_page_${String(pageNum).padStart(3,'0')}.png`;
+          const fileName = `${file.name.replace(/\\.pdf$/i, '')}_page_${String(pageNum).padStart(3, '0')}.png`;
 
           const item = document.createElement('div');
           item.className = 'page-item';
@@ -239,7 +300,7 @@
           item.appendChild(meta);
           item.appendChild(dl);
           pagesContainer.appendChild(item);
-          currentImages.push({name: fileName, blob});
+          currentImages.push({ name: fileName, blob });
           await new Promise(r => setTimeout(r, 60));
         }
         status.textContent = `Done — ${currentImages.length} image(s) ready.`;
@@ -253,21 +314,26 @@
       }
     });
 
-    downloadAllBtn.addEventListener('click', async ()=>{
+    downloadAllBtn.addEventListener('click', async () => {
       if (!currentImages.length) return;
       downloadAllBtn.disabled = true;
       status.textContent = 'Creating ZIP...';
       const zip = new JSZip();
       for (const img of currentImages) { zip.file(img.name, img.blob); }
-      const content = await zip.generateAsync({type:'blob'});
+      const content = await zip.generateAsync({ type: 'blob' });
       saveAs(content, 'images.zip');
       status.textContent = 'ZIP downloaded.';
       downloadAllBtn.disabled = false;
     });
 
-    function toggleDarkMode(){document.body.classList.toggle('dark-mode');localStorage.setItem('darkMode',document.body.classList.contains('dark-mode'));}
-    function initDarkMode(){if(localStorage.getItem('darkMode')==='true')document.body.classList.add('dark-mode');}
-    document.getElementById('year').textContent=new Date().getFullYear();
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+      localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    }
+    function initDarkMode() {
+      if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
+    }
+    document.getElementById('year').textContent = new Date().getFullYear();
     initDarkMode();
   </script>
 </body>
