@@ -1,0 +1,10 @@
+[
+  {
+    "name": "QR Generator",
+    "path": "tools/qr-generator/"
+  },
+  {
+    "name": "Password Generator",
+    "path": "tools/password-generator/"
+  }
+]

@@ -1,0 +1,15 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Userific – Tools</title>
+<meta name="description" content="Userific.xyz – A collection of free useful online tools.">
+<link rel="stylesheet" href="assets/css/base.css"><link rel="icon" href="favicon.ico"></head>
+<body><header><h1><a href="/">Userific</a></h1></header>
+<div class="container"><div class="search-box"><input type="text" id="searchInput" placeholder="Search tools..."></div>
+<div class="toggle-dark" onclick="toggleDarkMode()">🌗 Toggle Dark Mode</div><div class="tools-grid" id="toolsGrid"></div></div>
+<footer><p>&copy; <span id="year"></span> Userific.xyz – All Rights Reserved</p></footer>
+<script>
+async function loadTools(){try{const res=await fetch('tools.json');const tools=await res.json();const grid=document.getElementById('toolsGrid');const searchInput=document.getElementById('searchInput');function render(filter=''){grid.innerHTML='';tools.filter(t=>t.name.toLowerCase().includes(filter.toLowerCase())).forEach(t=>{const a=document.createElement('a');a.className='tool-card';a.href=t.path;a.innerHTML=`<h3>${t.name}</h3>`;grid.appendChild(a);});}render();searchInput.addEventListener('input',e=>render(e.target.value));}catch(e){console.error("Error loading tools.json",e);}}
+function toggleDarkMode(){document.body.classList.toggle('dark-mode');localStorage.setItem('darkMode',document.body.classList.contains('dark-mode'));}
+function initDarkMode(){if(localStorage.getItem('darkMode')==='true')document.body.classList.add('dark-mode');}
+document.getElementById('year').textContent=new Date().getFullYear();initDarkMode();loadTools();
+</script></body></html>
