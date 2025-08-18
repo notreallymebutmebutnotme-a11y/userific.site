@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 - Page Not Found</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+    :root {
+      --gradient-light: linear-gradient(135deg, #d9a7c7, #fffcdc);
+      --gradient-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+    body{background:var(--gradient-light);color:#111;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;}
+    body.dark-mode{background:var(--gradient-dark);color:#f5f5f5;}
+    header{width:100%;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;position:absolute;top:0;}
+    header h1 a{text-decoration:none;color:inherit;font-weight:700;font-size:1.5rem;}
+    .toggle-dark{cursor:pointer;font-size:1.2rem;}
+    h1{font-size:5rem;margin:0;}
+    p{margin:15px 0;font-size:1.2rem;}
+    a.button{display:inline-block;margin-top:20px;padding:12px 24px;font-size:1rem;font-weight:600;color:white;background:#007bff;border:none;border-radius:12px;text-decoration:none;transition:background 0.3s;}
+    a.button:hover{background:#0056b3;}
+    footer{position:absolute;bottom:10px;text-align:center;width:100%;font-size:0.9rem;}
+    footer a{margin:0 10px;color:inherit;text-decoration:none;}
+    footer a:hover{text-decoration:underline;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1><a href="/">Userific</a></h1>
+    <div class="toggle-dark" onclick="toggleDarkMode()">🌗</div>
+  </header>
+  <div class="container">
+    <h1>404</h1>
+    <p>Oops! Looks like this page wandered off 🌌</p>
+    <a href="/" class="button">Take Me Home</a>
+  </div>
+  <footer>
+    <p><a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms</a> | <a href="contact.html">Contact</a></p>
+  </footer>
+<script>
+function toggleDarkMode(){document.body.classList.toggle('dark-mode');localStorage.setItem('darkMode',document.body.classList.contains('dark-mode'));}
+function initDarkMode(){if(localStorage.getItem('darkMode')==='true')document.body.classList.add('dark-mode');}
+initDarkMode();
+</script>
+</body>
+</html>
