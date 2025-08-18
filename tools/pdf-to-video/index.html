@@ -1,0 +1,411 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF + Audio → Timed Video (16:9, 30fps)</title>
+  <style>
+    :root { --bg:#0b0d10; --fg:#e6eef8; --muted:#8fa3b8; --accent:#6aa3ff; }
+    html,body{height:100%}
+    body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--fg)}
+    header{padding:16px 20px;border-bottom:1px solid #1b212a;position:sticky;top:0;background:rgba(11,13,16,.9);backdrop-filter:saturate(1.2) blur(6px)}
+    h1{margin:0;font-size:18px}
+    main{display:grid;grid-template-columns:320px 1fr;gap:16px;padding:16px}
+    @media (max-width: 900px){ main{grid-template-columns:1fr} }
+    .panel{background:#0f1318;border:1px solid #1b212a;border-radius:14px;overflow:hidden}
+    .panel h2{font-size:13px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin:0;padding:12px 12px;border-bottom:1px solid #1b212a}
+    .panel .content{padding:12px}
+    label{display:block;margin:10px 0 4px;color:var(--muted)}
+    input[type=file], select, button, input[type=text]{width:100%;padding:10px;border-radius:10px;border:1px solid #2a3240;background:#0b0f14;color:var(--fg)}
+    button{cursor:pointer}
+    button.primary{background:var(--accent);color:#00122e;border:none;font-weight:600}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .progress{height:8px;background:#0b0f14;border:1px solid #2a3240;border-radius:999px;overflow:hidden}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,#6aa3ff,#91f2ff)}
+    .log{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;background:#0b0f14;color:#cfe2ff;border:1px solid #1b212a;border-radius:10px;padding:10px;height:240px;overflow:auto;white-space:pre-wrap}
+    .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+    .thumbs canvas{width:100%;height:auto;background:#000;border:1px solid #1b212a;border-radius:10px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #2a3240;border-radius:999px;color:var(--muted);font-size:12px}
+    footer{padding:12px 16px;color:#8fa3b8}
+    a.link{color:#9dccff}
+  </style>
+  <!-- pdf.js (UMD build) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
+  <!-- Tesseract.js for on-device OCR when PDFs are scanned -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <!-- ffmpeg.wasm for client-side rendering & audio conversion -->
+  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.7/dist/ffmpeg.min.js"></script>
+  <!-- Vosk browser STT (English small model) -->
+  <script src="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.14/dist/bundle.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>PDF + Audio → Timed Video (Client‑side)</h1>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>Inputs & Settings</h2>
+      <div class="content">
+        <label>PDF File</label>
+        <input id="pdfFile" type="file" accept="application/pdf" /><label>Audio File (MP3/WAV)</label>
+    <input id="audioFile" type="file" accept="audio/mpeg,audio/wav,audio/mp3" />
+
+    <div class="row">
+      <div>
+        <label>Resolution</label>
+        <select id="resolution">
+          <option value="1920x1080" selected>1080p (1920×1080)</option>
+          <option value="2560x1440">1440p (2560×1440)</option>
+          <option value="3840x2160">4K (3840×2160)</option>
+        </select>
+      </div>
+      <div>
+        <label>Frame Rate</label>
+        <select id="fps">
+          <option value="30" selected>30 fps</option>
+        </select>
+      </div>
+    </div>
+
+    <label>Transcription Engine</label>
+    <select id="sttEngine">
+      <option value="vosk" selected>On‑device (Vosk WASM, English)</option>
+      <option value="whisper">API (Whisper‑compatible) — requires API key</option>
+    </select>
+
+    <div id="apiBox" style="display:none">
+      <label>Whisper API Endpoint (multipart/form-data)</label>
+      <input id="apiUrl" type="text" placeholder="https://api.openai.com/v1/audio/transcriptions" />
+      <label>API Key (stored only in this browser)</label>
+      <input id="apiKey" type="text" placeholder="sk‑..." />
+    </div>
+
+    <div style="margin:12px 0; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <span class="pill" title="Runs work off the UI thread">⚙️ Web Worker processing</span>
+      <span class="pill" title="Tries to keep work going when tab is backgrounded">💤 Background‑friendly</span>
+      <span class="pill" title="Keeps progress if you navigate away">💾 Auto‑save checkpoints</span>
+    </div>
+
+    <button id="startBtn" class="primary">Start → Analyze, Align & Render</button>
+    <div style="height:10px"></div>
+    <div class="progress"><div id="progressBar" class="bar"></div></div>
+    <div style="height:10px"></div>
+    <div id="log" class="log" aria-live="polite"></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Preview & Pages</h2>
+  <div class="content">
+    <div id="summary"></div>
+    <div class="thumbs" id="thumbs"></div>
+    <div style="margin-top:10px">
+      <a id="downloadLink" class="link" download style="display:none">⬇️ Download Rendered MP4</a>
+    </div>
+  </div>
+</section>
+
+  </main>
+  <footer>
+    <div>Notes: 100% client‑side. If a PDF page lacks text, the app will OCR it (English). Matching uses transcript timestamps + fuzzy keyword overlap with each page’s extracted text. Pages are shown full‑screen 16:9 <em>filled from the top</em> (top‑aligned cover). Rendering target: H.264 MP4 at 30fps with simple fade‑in/fade‑out transitions. Work continues when tab is backgrounded (Web Worker). If you close the tab or the browser kills the worker, progress checkpoints let you resume later. The tool auto‑converts uploaded audio to mono 16k WAV for analysis and uses it for final render.</div>
+  </footer><script>
+// ------------------ UI helpers ------------------
+const $ = (id)=>document.getElementById(id);
+function log(msg){ const el=$("log"); el.textContent += `\n${new Date().toLocaleTimeString()} — ${msg}`; el.scrollTop=el.scrollHeight; }
+function setProgress(p){ $("progressBar").style.width = Math.max(0, Math.min(100, p)) + "%"; }
+
+$("sttEngine").addEventListener('change', e=>{ $("apiBox").style.display = e.target.value === 'whisper' ? 'block' : 'none'; });
+
+// Resume data
+const CK = { save:(k,v)=>localStorage.setItem(k, JSON.stringify(v)), load:(k,d=null)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}, del:(k)=>localStorage.removeItem(k) };
+
+// ------------------ Heavy libs (ffmpeg) on main for audio convert ------------------
+const { createFFmpeg, fetchFile } = FFmpeg;
+const ffmpeg = createFFmpeg({ log: false });
+async function ensureFFmpeg(){ if(!ffmpeg.isLoaded()) { log('Loading ffmpeg.wasm… (first run is heavy)'); await ffmpeg.load(); } }
+
+async function convertAudioToWav(file){
+  await ensureFFmpeg();
+  const data = await fetchFile(file);
+  await ffmpeg.FS('writeFile', 'in', data);
+  // Convert to mono 16k WAV for STT and rendering
+  await ffmpeg.run('-i','in','-ac','1','-ar','16000','out.wav');
+  const out = ffmpeg.FS('readFile','out.wav');
+  return out.buffer;
+}
+
+// ------------------ Worker for PDF/STT/ALIGN/RENDER ------------------
+const workerCode = `
+self.onmessage = async (e)=>{
+  const {type, payload} = e.data;
+  try{
+    if(type==='PDF_RENDER'){ const out = await renderPdfToImages(payload); post({type:'PDF_RENDER_DONE', payload: out}); }
+    if(type==='EXTRACT_TEXT'){ const out = await extractTextFromPdf(payload); post({type:'EXTRACT_TEXT_DONE', payload: out}); }
+    if(type==='OCR_PAGES'){ const out = await ocrMissing(payload); post({type:'OCR_PAGES_DONE', payload: out}); }
+    if(type==='TRANSCRIBE'){ const out = await transcribeAudio(payload); post({type:'TRANSCRIBE_DONE', payload: out}); }
+    if(type==='ALIGN'){ const out = await alignPages(payload); post({type:'ALIGN_DONE', payload: out}); }
+    if(type==='RENDER_VIDEO'){ const out = await renderVideo(payload); post({type:'RENDER_VIDEO_DONE', payload: out}); }
+  }catch(err){ post({type:'ERROR', payload:String(err && err.message || err)}) }
+};
+const post = (m)=>self.postMessage(m);
+
+async function renderPdfToImages({pdfArray, width, height}){
+  const pdf = await pdfjsLib.getDocument({data: pdfArray}).promise;
+  const pages = [];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page = await pdf.getPage(p);
+    const viewport = page.getViewport({scale: 2});
+    const canvas = new OffscreenCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+    const ctx = canvas.getContext('2d');
+    await page.render({canvasContext: ctx, viewport}).promise;
+    // Fit to 16:9 cover, top-aligned
+    const finalCanvas = new OffscreenCanvas(width, height);
+    const fctx = finalCanvas.getContext('2d');
+    fctx.fillStyle = '#000'; fctx.fillRect(0,0,width,height);
+    const ratio = Math.max(width/canvas.width, height/canvas.height);
+    const drawW = Math.ceil(canvas.width * ratio);
+    const drawH = Math.ceil(canvas.height * ratio);
+    const dx = Math.floor((width - drawW)/2); // center X
+    const dy = 0; // top aligned Y
+    fctx.drawImage(canvas, dx, dy, drawW, drawH);
+    const blob = await finalCanvas.convertToBlob({type:'image/png'});
+    const buf = await blob.arrayBuffer();
+    pages.push({ index:p-1, png: new Uint8Array(buf) });
+    post({type:'PDF_RENDER_PROGRESS', payload: Math.round((p/pdf.numPages)*100)});
+  }
+  return {pages, pageCount: pages.length};
+}
+
+async function extractTextFromPdf({pdfArray}){
+  const pdf = await pdfjsLib.getDocument({data: pdfArray}).promise;
+  const texts = [];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent().catch(()=>({items:[]}));
+    const text = (content.items||[]).map(i=>i.str).join(' ').replace(/\s+/g,' ').trim();
+    texts.push(text);
+    post({type:'TEXT_PROGRESS', payload: Math.round((p/pdf.numPages)*100)});
+  }
+  return {texts};
+}
+
+async function ocrMissing({pagePngs, pageTexts}){
+  const outTexts = [...pageTexts];
+  for(let i=0;i<pagePngs.length;i++){
+    if(outTexts[i] && outTexts[i].length>10) continue;
+    const png = pagePngs[i].png;
+    const blob = new Blob([png], {type:'image/png'});
+    const { data: { text } } = await Tesseract.recognize(blob, 'eng', { logger: m=>{ if(m.status==='recognizing text'){ post({type:'OCR_PROGRESS', payload: Math.round((i/pagePngs.length)*100)}) }}});
+    outTexts[i] = (text||'').replace(/\s+/g,' ').trim();
+  }
+  return {texts: outTexts};
+}
+
+function tokenize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean); }
+function jaccard(a,b){ const A=new Set(a), B=new Set(b); const inter=[...A].filter(x=>B.has(x)).length; const uni = new Set([...A,...B]).size; return uni? inter/uni : 0; }
+
+async function alignPages({pageTexts, transcriptSegments}){
+  const pageTokens = pageTexts.map(txt=> tokenize(txt));
+  const sim = transcriptSegments.map(seg=> pageTokens.map(pt=> jaccard(tokenize(seg.text), pt)));
+  const assignments = [];
+  let lastPage = 0;
+  for(let i=0;i<sim.length;i++){
+    const row = sim[i];
+    let bestIdx = lastPage; let best = -1;
+    for(let p=lastPage;p<row.length;p++){ if(row[p]>best){ best=row[p]; bestIdx=p; } }
+    assignments.push({seg:i, page:bestIdx, score:best});
+    lastPage = Math.min(bestIdx+1, pageTokens.length-1);
+  }
+  const pageTimes = Array(pageTokens.length).fill(null).map(()=>({t0:null,t1:null}));
+  for(const a of assignments){
+    const s = transcriptSegments[a.seg];
+    const P = pageTimes[a.page];
+    P.t0 = (P.t0==null)? s.t0 : Math.min(P.t0, s.t0);
+    P.t1 = (P.t1==null)? s.t1 : Math.max(P.t1, s.t1);
+  }
+  let lastEnd = 0;
+  for(let p=0;p<pageTimes.length;p++){
+    const cur = pageTimes[p];
+    if(cur.t0==null){ cur.t0 = lastEnd; cur.t1 = lastEnd + 2; }
+    if(cur.t0 < lastEnd) cur.t0 = lastEnd;
+    if(cur.t1 <= cur.t0) cur.t1 = cur.t0 + 2;
+    lastEnd = cur.t1;
+  }
+  return {pageTimes, assignments};
+}
+
+async function transcribeAudio({engine, wavArray, apiUrl, apiKey}){
+  if(engine==='whisper'){
+    const form = new FormData();
+    const blob = new Blob([wavArray], {type:'audio/wav'});
+    form.append('file', blob, 'audio.wav');
+    form.append('model', 'whisper-1');
+    form.append('response_format', 'verbose_json');
+    const res = await fetch(apiUrl, {method:'POST', headers:{'Authorization':`Bearer ${apiKey}`}, body: form});
+    if(!res.ok) throw new Error('API transcription failed: '+res.status);
+    const data = await res.json();
+    const segments = (data.segments||[]).map(s=>({ t0: s.start ?? 0, t1: s.end ?? (s.start+2), text: (s.text||'').toLowerCase() }));
+    return {segments};
+  } else {
+    const MODEL_URL = 'https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip';
+    const { Vosk } = self.vosk;
+    const recognizer = await Vosk.createRecognizer(MODEL_URL, 16000);
+    // wavArray expected mono 16k PCM WAV
+    function parseWavPCM16(arrayBuffer){
+      const dv = new DataView(arrayBuffer);
+      if(dv.getUint32(0,true)!==0x46464952) throw new Error('Not RIFF');
+      let pos = 12; let sampleRate=16000; let dataPos=0; let dataLen=0; let fmtFound=false; let bits=16; let ch=1;
+      while(pos < dv.byteLength-8){
+        const id = dv.getUint32(pos, false); pos+=4;
+        const len = dv.getUint32(pos, true); pos+=4;
+        if(id === 0x666d7420){ // 'fmt '
+          fmtFound=true; const audioFmt = dv.getUint16(pos, true); ch = dv.getUint16(pos+2,true); sampleRate = dv.getUint32(pos+4,true); bits = dv.getUint16(pos+14,true);
+          if(audioFmt!==1 || bits!==16) throw new Error('Need PCM16 WAV');
+          if(ch!==1) throw new Error('Use mono WAV');
+        } else if(id === 0x64617461){ // 'data'
+          dataPos = pos; dataLen = len; break;
+        }
+        pos += len;
+      }
+      return { sampleRate, pcm: new Int16Array(arrayBuffer, dataPos, dataLen/2) };
+    }
+    const { sampleRate, pcm } = parseWavPCM16(wavArray);
+    if(sampleRate!==16000) throw new Error('Expected 16k wav for Vosk');
+    recognizer.acceptWaveform(pcm);
+    const result = recognizer.result();
+    const words = result.words || [];
+    const segments = [];
+    let cur = {t0:null, t1:null, text:''};
+    for(const w of words){
+      if(cur.t0===null){ cur.t0 = w.start; cur.t1 = w.end; cur.text = w.word; }
+      else if(w.start - cur.t1 > 0.8){ segments.push({...cur, text:cur.text.toLowerCase()}); cur = {t0:w.start, t1:w.end, text:w.word}; }
+      else { cur.t1 = w.end; cur.text += ' ' + w.word; }
+    }
+    if(cur.t0!==null) segments.push({...cur, text:cur.text.toLowerCase()});
+    return {segments};
+  }
+}
+
+async function renderVideo({images, audioWavArray, width, height, fps, pageTimes}){
+  const { createFFmpeg } = FFmpeg;
+  const ffmpeg = createFFmpeg({ log: true });
+  await ffmpeg.load();
+  await ffmpeg.FS('writeFile', 'audio.wav', new Uint8Array(audioWavArray));
+  for(let i=0;i<images.length;i++){
+    await ffmpeg.FS('writeFile', `page_${String(i+1).padStart(3,'0')}.png`, images[i].png);
+  }
+  // Build per-image durations
+  const durations = pageTimes.map(pt=> Math.max(0.4, pt.t1 - pt.t0));
+  // Build inputs & filter with fade in/out per page, then concat
+  let inputs = '';
+  let filters = '';
+  for(let i=0;i<images.length;i++){
+    const dur = durations[i];
+    inputs += `-loop 1 -t ${dur.toFixed(3)} -i page_${String(i+1).padStart(3,'0')}.png `;
+    const fadeDur = Math.min(0.5, Math.max(0.2, dur/4));
+    const outLabel = `v${i}`;
+    filters += `[${i}:v]format=rgba,fade=t=in:st=0:d=${fadeDur}:alpha=1,fade=t=out:st=${(dur-fadeDur).toFixed(3)}:d=${fadeDur}:alpha=1,setsar=1[${outLabel}];`;
+  }
+  const concatLabels = images.map((_,i)=>`[v${i}]`).join('');
+  const filterComplex = `${filters}${concatLabels}concat=n=${images.length}:v=1:a=0,format=yuv420p[v]`;
+
+  const args = inputs.trim().split(/\s+/).concat([
+    '-i','audio.wav',
+    '-filter_complex', filterComplex,
+    '-map','[v]','-map',`${images.length}:a`,
+    '-s', `${width}x${height}`,
+    '-r', String(fps),
+    '-c:v','libx264','-pix_fmt','yuv420p','-profile:v','high','-crf','20','-preset','veryfast',
+    '-c:a','aac','-b:a','192k','-shortest','out.mp4'
+  ]);
+
+  await ffmpeg.run(...args);
+  const data = ffmpeg.FS('readFile', 'out.mp4');
+  return {mp4: data};
+}
+`;
+
+const worker = new Worker(URL.createObjectURL(new Blob([workerCode], {type:'application/javascript'})));
+
+worker.onmessage = (e)=>{
+  const {type, payload} = e.data;
+  if(type==='ERROR'){ log('❌ ' + payload); }
+  if(type==='PDF_RENDER_PROGRESS'){ setProgress(10 + Math.floor(payload*0.15)); }
+  if(type==='TEXT_PROGRESS'){ setProgress(25 + Math.floor(payload*0.1)); }
+  if(type==='OCR_PROGRESS'){ setProgress(35 + Math.floor(payload*0.15)); }
+  if(type==='PDF_RENDER_DONE'){
+    window._renderedPages = payload.pages; window._pageCount = payload.pageCount;
+    log(`Rendered ${payload.pageCount} pages to 16:9 images.`);
+    const thumbs = $("thumbs"); thumbs.innerHTML='';
+    payload.pages.forEach((p,i)=>{ const img = new Image(); img.src = URL.createObjectURL(new Blob([p.png],{type:'image/png'})); const c = document.createElement('canvas'); const ctx=c.getContext('2d'); img.onload=()=>{ c.width=240; c.height=Math.round(240*9/16); ctx.drawImage(img,0,0,c.width,c.height); }; thumbs.appendChild(c); });
+  }
+  if(type==='EXTRACT_TEXT_DONE'){ window._pageTexts = payload.texts; log('Extracted PDF text.'); }
+  if(type==='OCR_PAGES_DONE'){ window._pageTexts = payload.texts; log('OCR completed for image-only pages.'); }
+  if(type==='TRANSCRIBE_DONE'){ window._segments = payload.segments; log(`Transcribed audio into ${payload.segments.length} segments.`); }
+  if(type==='ALIGN_DONE'){
+    window._pageTimes = payload.pageTimes; window._assignments = payload.assignments; log('Aligned transcript to pages.');
+  }
+  if(type==='RENDER_VIDEO_DONE'){
+    const blob = new Blob([payload.mp4], {type:'video/mp4'});
+    const url = URL.createObjectURL(blob);
+    const a = $("downloadLink"); a.href = url; a.download = 'slideshow.mp4'; a.style.display='inline-block';
+    log('✅ Rendering complete with fades.');
+    setProgress(100);
+  }
+};
+
+async function fileToArrayBuffer(file){ return await file.arrayBuffer(); }
+
+$("startBtn").addEventListener('click', async ()=>{
+  const pdf = $("pdfFile").files[0];
+  const audio = $("audioFile").files[0];
+  if(!pdf || !audio){ alert('Please choose both a PDF and an audio file.'); return; }
+  const [w,h] = $("resolution").value.split('x').map(Number);
+  const fps = parseInt($("fps").value,10);
+  const sttEngine = $("sttEngine").value;
+  const apiUrl = $("apiUrl").value.trim();
+  const apiKey = $("apiKey").value.trim();
+
+  setProgress(0); log('Loading files…');
+  const [pdfArrayBuf, audioBuf] = await Promise.all([fileToArrayBuffer(pdf), fileToArrayBuffer(audio)]);
+  CK.save('lastSession', { ts: Date.now(), pdfName: pdf.name, audioName: audio.name, res: [w,h], fps, sttEngine });
+
+  // Convert audio to mono 16k WAV for STT + render
+  log('Converting audio to WAV (mono 16k)…');
+  const wavArrayBuf = await convertAudioToWav(new Blob([audioBuf]));
+
+  // 1) Render pages to 16:9 top-aligned images
+  log('Rendering PDF pages to 16:9 canvases…');
+  worker.postMessage({type:'PDF_RENDER', payload:{ pdfArray: pdfArrayBuf, width:w, height:h }});
+
+  // 2) Extract text
+  log('Extracting embedded PDF text…');
+  worker.postMessage({type:'EXTRACT_TEXT', payload:{ pdfArray: pdfArrayBuf }});
+
+  // 3) Transcribe audio
+  log('Transcribing audio…');
+  worker.postMessage({type:'TRANSCRIBE', payload:{ engine: sttEngine, wavArray: wavArrayBuf, apiUrl, apiKey }});
+
+  // Wait until pages, texts, segments ready
+  const waitFor = (cond)=> new Promise(res=>{ const t=setInterval(()=>{ if(cond()){ clearInterval(t); res(); } }, 400); });
+  await waitFor(()=> window._renderedPages && window._pageTexts && window._segments);
+  setProgress(65);
+
+  // 4) OCR missing
+  log('Running OCR for pages lacking text…');
+  worker.postMessage({type:'OCR_PAGES', payload:{ pagePngs: window._renderedPages, pageTexts: window._pageTexts }});
+  await waitFor(()=> window._pageTexts && window._pageTexts.every(t=> typeof t==='string'));
+  setProgress(78);
+
+  // 5) Align
+  log('Aligning transcript segments to pages…');
+  worker.postMessage({type:'ALIGN', payload:{ pageTexts: window._pageTexts, transcriptSegments: window._segments }});
+  await waitFor(()=> window._pageTimes);
+  setProgress(86);
+
+  // 6) Render MP4 with fades
+  log('Rendering MP4 with fade transitions (this is compute heavy)…');
+  worker.postMessage({type:'RENDER_VIDEO', payload:{ images: window._renderedPages, audioWavArray: wavArrayBuf, width:w, height:h, fps, pageTimes: window._pageTimes }});
+});
+</script></body>
+  </html>
