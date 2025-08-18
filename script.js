@@ -4,13 +4,14 @@ document.addEventListener("DOMContentLoaded", () => {
   fetch("tools.json")
     .then(response => response.json())
     .then(tools => {
-      // detect current site base automatically
-      let basePath = window.location.pathname;
-      
-      // if you are on GitHub Pages, basePath will include repo name
-      // ensure it always ends with a "/"
-      if (!basePath.endsWith("/")) {
-        basePath = basePath.substring(0, basePath.lastIndexOf("/") + 1);
+      // Detect if we are on GitHub Pages
+      let baseUrl = window.location.origin;
+      let pathName = window.location.pathname;
+
+      // If hosted under a repo (like /userific.site/), keep that part
+      let repoName = "";
+      if (pathName.includes("/userific.site")) {
+        repoName = "/userific.site";
       }
 
       tools.forEach(tool => {
@@ -19,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
         toolCard.innerHTML = `
           <h2>${tool.name}</h2>
           <p>${tool.description}</p>
-          <a href="${basePath}tools/${tool.slug}/" class="btn">Open Tool</a>
+          <a href="${baseUrl}${repoName}/tools/${tool.slug}/" class="btn">Open Tool</a>
         `;
         toolsContainer.appendChild(toolCard);
       });
