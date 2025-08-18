@@ -3,12 +3,12 @@
     "name": "PDF to PNG Converter",
     "slug": "pdf-to-png",
     "description": "Convert PDF files into high-resolution PNG images. Free, fast and no login required.",
-    "url": "/tools/pdf-to-png/"
+    "url": "/userific.site/tools/pdf-to-png/"
   },
   {
     "name": "Silence Remover",
     "slug": "silence-remover",
     "description": "Remove silence from audio files like MP3/WAV. Perfect for podcasts, voiceovers and music editing. Free, no login required.",
-    "url": "/tools/silence-remover/"
+    "url": "/userific.site/tools/silence-remover/"
   }
 ]
