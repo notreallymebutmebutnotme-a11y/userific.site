@@ -1,1 +1,0 @@
-Put your tool HTML files here, e.g., silence-cutter.html, normalizer.html
