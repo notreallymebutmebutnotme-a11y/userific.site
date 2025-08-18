@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF to PNG Converter – Free Online Tool | Userific</title>
+  <meta name="description" content="Convert PDF to PNG images online instantly. Free, secure, and works in your browser without login. Ideal for presentations, documents, and high-quality image extraction.">
+  <meta name="keywords" content="pdf to png, convert pdf to image, free pdf converter, online pdf to png, extract images from pdf, high resolution pdf to png, pdf to png converter free, pdf to png tool, convert pdf pages to images, pdf image converter">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient-light: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      --bg-gradient-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      --text-light: #111;
+      --text-dark: #f5f5f5;
+      --btn-bg: #007bff;
+      --btn-text: #fff;
+      --radius: 10px;
+    }
+    * {box-sizing:border-box;margin:0;padding:0;font-family:'Poppins',sans-serif;}
+    body {
+      background: var(--bg-gradient-light);
+      color: var(--text-light);
+      transition: background 0.3s, color 0.3s;
+    }
+    body.dark {background: var(--bg-gradient-dark); color: var(--text-dark);}
+    header {
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1rem 2rem;font-weight:600;
+    }
+    header a {text-decoration:none;color:inherit;font-size:1.3rem;}
+    header span {font-size:0.85rem;font-weight:400;display:block;}
+    .toggle {cursor:pointer;font-size:1.5rem;}
+    main {
+      max-width:800px;margin:2rem auto;padding:1rem;text-align:center;
+    }
+    h1 {margin-bottom:1rem;font-size:1.8rem;}
+    .ads {
+      margin:1.5rem 0;padding:1rem;border:2px dashed #999;border-radius:var(--radius);
+      font-size:0.9rem;opacity:0.8;
+    }
+    .upload-box {
+      background:rgba(255,255,255,0.05);
+      padding:2rem;border-radius:var(--radius);
+      box-shadow:0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom:2rem;
+    }
+    input[type="file"] {display:none;}
+    .file-label {
+      display:inline-block;padding:0.7rem 1.4rem;
+      background:var(--btn-bg);color:var(--btn-text);
+      border-radius:var(--radius);cursor:pointer;
+      font-weight:500;
+    }
+    select, input {
+      margin-top:1rem;width:100%;padding:0.6rem;
+      border-radius:var(--radius);border:1px solid #ccc;
+      font-family:inherit;
+    }
+    button {
+      margin-top:1rem;padding:0.8rem 1.5rem;
+      background:var(--btn-bg);color:var(--btn-text);
+      border:none;border-radius:var(--radius);font-size:1rem;
+      cursor:pointer;transition:background 0.3s;
+    }
+    button:hover {background:#0056b3;}
+    footer {text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
+    footer a {color:inherit;text-decoration:underline;}
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/">Userific <span>Useful tools built just for you ✨</span></a>
+    <div class="toggle" id="themeToggle">🌙</div>
+  </header>
+
+  <main>
+    <h1>PDF to PNG Converter</h1>
+    <p>Convert PDF pages into high-quality PNG images instantly. Secure, fast, and works directly in your browser without login.</p>
+
+    <div class="ads">Ads will show here</div>
+
+    <div class="upload-box">
+      <label for="pdfFile" class="file-label">Choose PDF File</label>
+      <input type="file" id="pdfFile" accept="application/pdf">
+
+      <label for="scale">Output Resolution</label>
+      <select id="scale">
+        <option value="1">Standard</option>
+        <option value="2">HD (1080p)</option>
+        <option value="3">QHD (1440p)</option>
+        <option value="4">4K</option>
+      </select>
+
+      <label for="pages">Pages to Convert (comma separated)</label>
+      <input type="text" id="pages" placeholder="Leave blank to convert all pages">
+
+      <button id="convertBtn">Convert PDF</button>
+    </div>
+
+    <div class="ads">Ads will show here</div>
+
+    <p id="status">Ready.</p>
+    <div id="output"></div>
+
+    <div class="ads">Ads will show here</div>
+  </main>
+
+  <footer>
+    © 2025 Userific.xyz — All Rights Reserved |
+    <a href="/privacy.html">Privacy</a> | 
+    <a href="/terms.html">Terms</a> | 
+    <a href="/contact.html">Contact</a>
+  </footer>
+
+  <script>
+    // Dark mode toggle
+    const themeToggle = document.getElementById('themeToggle');
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    });
+
+    // Placeholder logic
+    document.getElementById('convertBtn').addEventListener('click', () => {
+      document.getElementById('status').textContent = "Converting PDF...";
+      // Here you would add real PDF.js logic
+      setTimeout(()=>{
+        document.getElementById('status').textContent = "Conversion complete!";
+        document.getElementById('output').innerHTML = "<p>[Preview images would show here]</p>";
+      },2000);
+    });
+  </script>
+</body>
+                                           </html>
