@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Silence Remover – MP3/WAV | Userific</title>
-  <meta name="description" content="Remove silence from MP3/WAV audio files online. Free, no login required. Perfect for podcasts, voiceovers, and music editing.">
-  <meta name="keywords" content="silence remover, cut silence mp3, remove gaps audio, podcast silence cutter, voiceover silence remover, free audio editing, no login audio tool, Userific">
+  <meta name="description" content="Remove silence from MP3/WAV audio files online. Free, no login required. Perfect for podcasts, voiceovers, lectures, and music editing.">
+  <meta name="keywords" content="silence remover, cut silence mp3, remove gaps audio, podcast silence cutter, voiceover silence remover, free audio editing, no login audio tool, automatic silence detection, audio cleanup, Userific">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
   <style>
     :root {
       --gradient-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -19,10 +20,11 @@
     body{min-height:100vh;background:var(--gradient-dark);color:#f5f5f5;display:flex;flex-direction:column;}
     body.light{background:var(--gradient-light);color:#111;}
     header{padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
-    header h1{font-size:1.6rem;font-weight:700;}
+    header h1{font-size:1.6rem;font-weight:700;margin-bottom:2px;}
     header h1 a{text-decoration:none;color:inherit;}
-    header .tagline{font-size:0.9rem;font-weight:400;}
-    .toggle{cursor:pointer;font-size:1.5rem;}
+    header .tagline{font-size:0.9rem;font-weight:400;opacity:0.9;}
+    .toggle{cursor:pointer;font-size:1.5rem;background:transparent;border:none;outline:none;line-height:1;}
+    .toggle:hover,.toggle:focus{opacity:0.9;text-decoration:none;}
     main{flex:1;max-width:900px;margin:1rem auto;padding:1rem;width:100%;}
     .ads{margin:1rem 0;padding:1rem;border:2px dashed #777;border-radius:12px;text-align:center;font-size:0.9rem;}
     .card{background:var(--card-dark);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
@@ -39,6 +41,8 @@
     footer{text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
     footer a{color:inherit;text-decoration:underline;margin:0 5px;}
   </style>
+
+  <!-- MP3 encoder (lazy-loaded when needed) -->
   <script>
     let lameLoaded = false;
     async function ensureLame() {
@@ -59,17 +63,16 @@
       <h1><a href="/">Userific</a></h1>
       <div class="tagline">Useful tools built just for you ✨</div>
     </div>
-    <div class="toggle" id="themeToggle">☀️</div>
+    <button class="toggle" id="themeToggle" aria-label="Toggle theme">🌗</button>
   </header>
 
   <main>
-    <h1>Silence Remover</h1>
-    <p>Remove long silences from audio and keep only what matters. Works with MP3/WAV files. Exports in your chosen format. 100% free, secure, no login required.</p>
+    <h1 style="text-align:center;margin-bottom:8px;">Silence Remover</h1>
+    <p style="text-align:center;opacity:0.9;">Upload an MP3 or WAV. This tool automatically trims long silences and keeps a short natural gap. Works locally in your browser. No login required.</p>
 
     <div class="ads">Ads will show here</div>
 
     <div class="card">
-      <!-- original working UI -->
       <label>Choose MP3/WAV file</label>
       <input id="file" type="file" accept=".mp3,.wav,audio/*" />
 
@@ -97,7 +100,7 @@
         <div class="val"><span id="keepVal">0.5</span> s</div>
       </div>
 
-      <div class="row">
+      <div class="row" style="grid-template-columns:1fr 1fr 1fr;gap:10px;">
         <button id="analyze">Analyze</button>
         <select id="format">
           <option value="mp3" selected>Export: MP3 (128 kbps)</option>
@@ -108,7 +111,7 @@
 
       <div id="out">Ready.</div>
       <div id="links"></div>
-      <p class="small">Tip: If words get chopped, lower the threshold (e.g., −50 dB) or increase “Minimum silence”.</p>
+      <p class="small" style="opacity:0.8;margin-top:10px;">Tip: If words get chopped, lower the threshold (e.g., −50 dB) or increase “Minimum silence”.</p>
     </div>
 
     <div class="ads">Ads will show here</div>
@@ -116,208 +119,252 @@
 
   <footer>
     <p>&copy; <span id="year"></span> Userific.xyz – All Rights Reserved</p>
-    <p><a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms</a> | <a href="contact.html">Contact</a></p>
+    <p><a href="/privacy.html">Privacy Policy</a> | <a href="/terms.html">Terms</a> | <a href="/contact.html">Contact</a></p>
   </footer>
 
-  <!-- keep your working JS code unchanged -->
   <script>
     document.getElementById("year").textContent=new Date().getFullYear();
     const themeToggle=document.getElementById("themeToggle");
     themeToggle.addEventListener("click",()=>{
       document.body.classList.toggle("light");
-      themeToggle.textContent=document.body.classList.contains("light")?'🌙':'☀️';
+      themeToggle.textContent=document.body.classList.contains("light")?'🌙':'🌗';
     });
   </script>
 
-  <!-- 👇 Your original silence remover logic -->
+  <!-- Working silence remover logic with freeze-proof fixes -->
   <script>
-const fileInput = document.getElementById("file");
-const analyzeBtn = document.getElementById("analyze");
-const processBtn = document.getElementById("process");
-const out = document.getElementById("out");
-const links = document.getElementById("links");
-const threshSlider = document.getElementById("thresh");
-const minSilSlider = document.getElementById("minsil");
-const keepGapSlider = document.getElementById("keepgap");
-const threshVal = document.getElementById("threshVal");
-const minSilVal = document.getElementById("minsilVal");
-const keepVal = document.getElementById("keepVal");
-const formatSelect = document.getElementById("format");
+    const fileInput = document.getElementById("file");
+    const analyzeBtn = document.getElementById("analyze");
+    const processBtn = document.getElementById("process");
+    const out = document.getElementById("out");
+    const links = document.getElementById("links");
+    const threshSlider = document.getElementById("thresh");
+    const minSilSlider = document.getElementById("minsil");
+    const keepGapSlider = document.getElementById("keepgap");
+    const threshVal = document.getElementById("threshVal");
+    const minSilVal = document.getElementById("minsilVal");
+    const keepVal = document.getElementById("keepVal");
+    const formatSelect = document.getElementById("format");
 
-let audioBuffer, cuts = [];
+    let audioCtx = null;
+    let audioBuffer = null;
+    let cuts = [];
 
-threshSlider.oninput = () => { threshVal.textContent = threshSlider.value; };
-minSilSlider.oninput = () => { minSilVal.textContent = minSilSlider.value; };
-keepGapSlider.oninput = () => { keepVal.textContent = keepGapSlider.value; };
+    threshSlider.oninput = () => { threshVal.textContent = threshSlider.value; };
+    minSilSlider.oninput = () => { minSilVal.textContent = minSilSlider.value; };
+    keepGapSlider.oninput = () => { keepVal.textContent = keepGapSlider.value; };
 
-async function decodeFile(file) {
-  const ctx = new AudioContext();
-  const arrayBuffer = await file.arrayBuffer();
-  return await ctx.decodeAudioData(arrayBuffer);
-}
+    async function decodeFile(file) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const arrayBuffer = await file.arrayBuffer();
+      return new Promise((resolve, reject) => {
+        audioCtx.decodeAudioData(arrayBuffer.slice(0), resolve, reject);
+      });
+    }
 
-function dbfs(rms) {
-  return 20 * Math.log10(rms);
-}
+    function dbfs(rms) {
+      return 20 * Math.log10(rms || 1e-10);
+    }
 
-function analyzeBuffer(buffer, threshold, minSil, keepGap) {
-  const data = buffer.getChannelData(0);
-  const sr = buffer.sampleRate;
-  const winSize = Math.floor(0.02 * sr);
-  const hop = winSize;
-  let silStart = null;
-  cuts = [];
+    function analyzeBuffer(buffer, threshold, minSil) {
+      // Use mono for analysis (first channel)
+      const data = buffer.getChannelData(0);
+      const sr = buffer.sampleRate;
+      const winSize = Math.floor(0.02 * sr); // 20 ms
+      const hop = winSize;
+      let silStart = null;
+      const found = [];
 
-  for (let i = 0; i < data.length; i += hop) {
-    const slice = data.slice(i, i + winSize);
-    const rms = Math.sqrt(slice.reduce((s, v) => s + v*v, 0) / slice.length);
-    const level = dbfs(rms || 1e-6);
-
-    if (level < threshold) {
-      if (silStart === null) silStart = i;
-    } else {
-      if (silStart !== null) {
-        const dur = (i - silStart) / sr;
-        if (dur >= minSil) {
-          cuts.push([silStart / sr, i / sr]);
+      for (let i = 0; i < data.length; i += hop) {
+        let sum = 0;
+        const end = Math.min(i + winSize, data.length);
+        for (let j = i; j < end; j++) {
+          const v = data[j];
+          sum += v * v;
         }
-        silStart = null;
+        const rms = Math.sqrt(sum / Math.max(1, end - i));
+        const level = dbfs(rms);
+
+        if (level < threshold) {
+          if (silStart === null) silStart = i;
+        } else if (silStart !== null) {
+          const dur = (i - silStart) / sr;
+          if (dur >= minSil) {
+            found.push([silStart / sr, i / sr]);
+          }
+          silStart = null;
+        }
       }
+      // tail silence
+      if (silStart !== null) {
+        const dur = (data.length - silStart) / sr;
+        if (dur >= minSil) found.push([silStart / sr, data.length / sr]);
+      }
+      return found;
     }
-  }
-  return cuts;
-}
 
-analyzeBtn.onclick = async () => {
-  if (!fileInput.files[0]) {
-    alert("Please choose an audio file first.");
-    return;
-  }
-  out.textContent = "Analyzing...";
-  audioBuffer = await decodeFile(fileInput.files[0]);
-  const threshold = parseFloat(threshSlider.value);
-  const minSil = parseFloat(minSilSlider.value);
-  const keepGap = parseFloat(keepGapSlider.value);
-  analyzeBuffer(audioBuffer, threshold, minSil, keepGap);
-  out.textContent = `Found ${cuts.length} silent segments. Ready to process.`;
-  processBtn.disabled = false;
-};
+    fileInput.onchange = async () => {
+      const f = fileInput.files[0];
+      if (!f) return;
+      try {
+        out.textContent = "Loading audio…";
+        audioBuffer = await decodeFile(f);
+        out.textContent = `Loaded ${f.name} (${audioBuffer.duration.toFixed(1)}s)`;
+        processBtn.disabled = true;
+        cuts = [];
+      } catch (err) {
+        console.error(err);
+        out.textContent = "Failed to decode audio. Try a different file.";
+      }
+    };
 
-processBtn.onclick = async () => {
-  if (!audioBuffer) return;
-  out.textContent = "Processing... this may take a while.";
+    analyzeBtn.onclick = () => {
+      if (!audioBuffer) { alert("Choose an audio file first."); return; }
+      const threshold = parseFloat(threshSlider.value);
+      const minSil = parseFloat(minSilSlider.value);
+      cuts = analyzeBuffer(audioBuffer, threshold, minSil);
+      out.textContent = `Found ${cuts.length} silent segments. Ready to process.`;
+      processBtn.disabled = false;
+    };
 
-  const threshold = parseFloat(threshSlider.value);
-  const minSil = parseFloat(minSilSlider.value);
-  const keepGap = parseFloat(keepGapSlider.value);
-  analyzeBuffer(audioBuffer, threshold, minSil, keepGap);
+    processBtn.onclick = async () => {
+      if (!audioBuffer) return;
+      try {
+        out.textContent = "Processing… this may take a while.";
+        const threshold = parseFloat(threshSlider.value);
+        const minSil = parseFloat(minSilSlider.value);
+        const keepGap = parseFloat(keepGapSlider.value);
+        // Recompute to reflect latest sliders
+        cuts = analyzeBuffer(audioBuffer, threshold, minSil);
 
-  // Cut silences
-  const sr = audioBuffer.sampleRate;
-  let segments = [];
-  let last = 0;
-  for (let [s, e] of cuts) {
-    const start = Math.max(0, last);
-    const end = Math.max(0, s - keepGap);
-    if (end > start) segments.push([start, end]);
-    last = e + keepGap;
-  }
-  if (last < audioBuffer.duration) segments.push([last, audioBuffer.duration]);
+        // Build segments to keep (with keepGap padding)
+        const sr = audioBuffer.sampleRate;
+        const segments = [];
+        let last = 0;
+        for (const [s, e] of cuts) {
+          const start = Math.max(0, last);
+          const end = Math.max(0, s - keepGap);
+          if (end > start) segments.push([start, end]);
+          last = e + keepGap;
+        }
+        if (last < audioBuffer.duration) segments.push([last, audioBuffer.duration]);
 
-  const newLen = segments.reduce((s,[a,b]) => s + (b-a), 0);
-  const outBuf = new AudioContext().createBuffer(1, newLen*sr, sr);
-  let pos = 0;
-  for (let [a,b] of segments) {
-    const seg = audioBuffer.getChannelData(0).slice(a*sr, b*sr);
-    outBuf.getChannelData(0).set(seg, pos);
-    pos += seg.length;
-  }
+        // Total length in samples
+        const totalSamples = segments.reduce((sum, [a, b]) => sum + Math.max(0, Math.floor((b - a) * sr)), 0);
+        if (totalSamples <= 0) {
+          out.textContent = "No audio left after silence removal. Loosen the settings and try again.";
+          return;
+        }
 
-  const format = formatSelect.value;
-  if (format === "wav") {
-    // Export WAV
-    const wav = audioBufferToWav(outBuf);
-    const blob = new Blob([wav], { type: "audio/wav" });
-    const url = URL.createObjectURL(blob);
-    makeDownloadLink(url, "output.wav");
-  } else {
-    // Export MP3 (using lamejs)
-    await ensureLame();
-    const mp3encoder = new lamejs.Mp3Encoder(1, sr, 128);
-    const samples = outBuf.getChannelData(0);
-    let mp3Data = [];
-    const maxSamples = 1152;
-    for (let i = 0; i < samples.length; i += maxSamples) {
-      const chunk = samples.subarray(i, i+maxSamples);
-      const buf = new Int16Array(chunk.length);
-      for (let j=0;j<chunk.length;j++) buf[j] = Math.max(-32768, Math.min(32767, chunk[j]*32767));
-      const mp3buf = mp3encoder.encodeBuffer(buf);
-      if (mp3buf.length > 0) mp3Data.push(mp3buf);
+        // Create output mono buffer safely
+        const offline = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, totalSamples, sr);
+        const outBuf = offline.createBuffer(1, totalSamples, sr);
+        const src = audioBuffer.getChannelData(0);
+        const dst = outBuf.getChannelData(0);
+        let pos = 0;
+        for (const [a, b] of segments) {
+          const A = Math.max(0, Math.floor(a * sr));
+          const B = Math.max(A, Math.floor(b * sr));
+          const len = B - A;
+          if (len > 0) {
+            dst.set(src.subarray(A, B), pos);
+            pos += len;
+          }
+        }
+
+        // Export
+        links.innerHTML = "";
+        const format = formatSelect.value;
+        if (format === "wav") {
+          const wav = audioBufferToWav(outBuf);
+          const blob = new Blob([wav], { type: "audio/wav" });
+          const url = URL.createObjectURL(blob);
+          makeDownloadLink(url, "silence-removed.wav");
+        } else {
+          await ensureLame();
+          const mp3blob = encodeMp3(outBuf, 128);
+          const url = URL.createObjectURL(mp3blob);
+          makeDownloadLink(url, "silence-removed.mp3");
+        }
+
+        out.textContent = "Done! Your file is ready.";
+      } catch (err) {
+        console.error(err);
+        out.textContent = "Processing failed. Try adjusting settings or a smaller file.";
+      }
+    };
+
+    function makeDownloadLink(url, name) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.textContent = "Download " + name;
+      a.className = "dl";
+      links.innerHTML = "";
+      links.appendChild(a);
     }
-    const enc = mp3encoder.flush();
-    if (enc.length > 0) mp3Data.push(enc);
-    const blob = new Blob(mp3Data, {type: "audio/mp3"});
-    const url = URL.createObjectURL(blob);
-    makeDownloadLink(url, "output.mp3");
-  }
 
-  out.textContent = "Done!";
-};
+    // WAV encoder
+    function audioBufferToWav(buffer) {
+      const numChannels = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const samples = buffer.getChannelData(0);
+      const byteRate = sampleRate * numChannels * 2;
+      const blockAlign = numChannels * 2;
+      const dataSize = samples.length * numChannels * 2;
+      const bufferLength = 44 + dataSize;
+      const ab = new ArrayBuffer(bufferLength);
+      const view = new DataView(ab);
+      let offset = 0;
+      function writeString(s) { for (let i=0;i<s.length;i++) view.setUint8(offset++, s.charCodeAt(i)); }
+      function write16(v) { view.setUint16(offset, v, true); offset += 2; }
+      function write32(v) { view.setUint32(offset, v, true); offset += 4; }
 
-function makeDownloadLink(url, name) {
-  links.innerHTML = "";
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.textContent = "Download " + name;
-  a.className = "dl";
-  links.appendChild(a);
-}
+      writeString("RIFF");             // RIFF header
+      write32(36 + dataSize);
+      writeString("WAVE");
+      writeString("fmt ");             // fmt chunk
+      write32(16);
+      write16(1);                      // PCM
+      write16(numChannels);
+      write32(sampleRate);
+      write32(byteRate);
+      write16(blockAlign);
+      write16(16);                     // bits per sample
+      writeString("data");             // data chunk
+      write32(dataSize);
 
-// Helper: audioBuffer → WAV ArrayBuffer
-function audioBufferToWav(buffer) {
-  const numOfChan = buffer.numberOfChannels,
-        length = buffer.length * numOfChan * 2 + 44,
-        out = new ArrayBuffer(length),
-        view = new DataView(out),
-        channels = [],
-        sampleRate = buffer.sampleRate;
+      // Mono data
+      for (let i = 0; i < samples.length; i++) {
+        let s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
+      return ab;
+    }
 
-  let offset = 0;
-  function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
-  function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
+    // MP3 encoder (mono, lamejs)
+    function encodeMp3(buffer, kbps = 128) {
+      const sr = buffer.sampleRate;
+      const samples = buffer.getChannelData(0);
+      const mp3encoder = new lamejs.Mp3Encoder(1, sr, kbps);
+      const maxSamples = 1152;
+      const mp3Data = [];
 
-  setUint32(0x46464952); // "RIFF"
-  setUint32(length - 8);
-  setUint32(0x45564157); // "WAVE"
-  setUint32(0x20746d66); // "fmt "
-  setUint32(16);
-  setUint16(1);
-  setUint16(numOfChan);
-  setUint32(sampleRate);
-  setUint32(sampleRate * numOfChan * 2);
-  setUint16(numOfChan * 2);
-  setUint16(16);
-  setUint32(0x61746164); // "data"
-  setUint32(length - offset - 4);
-
-  for (let i = 0; i < buffer.numberOfChannels; i++)
-    channels.push(buffer.getChannelData(i));
-
-  let interleaved = new Float32Array(buffer.length * numOfChan);
-  for (let i = 0; i < buffer.length; i++)
-    for (let ch = 0; ch < numOfChan; ch++)
-      interleaved[i * numOfChan + ch] = channels[ch][i];
-
-  let idx = 44;
-  for (let i = 0; i < interleaved.length; i++, idx += 2) {
-    let s = Math.max(-1, Math.min(1, interleaved[i]));
-    view.setInt16(idx, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-  }
-  return out;
-}
-  </script>
-    // (Paste the exact working JS from silence_cutter_mp3_fixed.html here without changes)
+      for (let i = 0; i < samples.length; i += maxSamples) {
+        const slice = samples.subarray(i, i + maxSamples);
+        const pcm = new Int16Array(slice.length);
+        for (let j = 0; j < slice.length; j++) {
+          const s = Math.max(-1, Math.min(1, slice[j]));
+          pcm[j] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        const enc = mp3encoder.encodeBuffer(pcm);
+        if (enc.length > 0) mp3Data.push(enc);
+      }
+      const end = mp3encoder.flush();
+      if (end.length > 0) mp3Data.push(end);
+      return new Blob(mp3Data, { type: "audio/mpeg" });
+    }
   </script>
 </body>
 </html>
