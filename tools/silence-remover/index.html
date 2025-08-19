@@ -1,140 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Silence Remover – Free Online Tool | Userific</title>
   <meta name="description" content="Remove silence from audio files (MP3, WAV) instantly online. Perfect for podcasts, voiceovers, lectures, and music editing. Free, fast, secure, no login required.">
   <meta name="keywords" content="silence remover, audio silence cutter, remove silence from mp3, podcast silence remover, voiceover editing tool, trim audio silence online, free silence remover, no login audio editor, automatic silence detection, audio cleanup tool">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+
   <style>
     :root {
-      --bg-light: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-      --bg-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      --btn-bg: #007bff;
-      --btn-text: #fff;
-      --radius: 10px;
+      --gradient-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      --gradient-light: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      --card-dark: rgba(30,30,30,0.85);
+      --card-light: rgba(255,255,255,0.9);
+      --text-dark: #f5f5f5;
+      --text-light: #111;
+      --primary: #2a7cff;
     }
-    * {margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
-    body {background: var(--bg-dark);color:#f5f5f5;transition:background 0.3s,color 0.3s;}
-    body.light {background: var(--bg-light);color:#111;}
-    header {display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;}
-    header a {text-decoration:none;color:inherit;font-weight:600;font-size:1.3rem;}
-    header span {display:block;font-size:0.85rem;font-weight:400;}
-    .toggle {cursor:pointer;font-size:1.5rem;}
-    main {max-width:800px;margin:2rem auto;padding:1rem;text-align:center;}
-    h1 {margin-bottom:1rem;font-size:1.8rem;}
-    .ads {margin:1.5rem 0;padding:1rem;border:2px dashed #999;border-radius:var(--radius);opacity:0.8;font-size:0.9rem;}
-    .upload-box {padding:2rem;border-radius:var(--radius);box-shadow:0 4px 10px rgba(0,0,0,0.1);background:rgba(255,255,255,0.05);margin-bottom:2rem;}
-    input[type="file"] {display:none;}
-    .file-label {display:inline-block;padding:0.7rem 1.4rem;background:var(--btn-bg);color:var(--btn-text);border-radius:var(--radius);cursor:pointer;font-weight:500;}
-    input {margin-top:1rem;width:100%;padding:0.6rem;border-radius:var(--radius);border:1px solid #ccc;}
-    button {margin-top:1rem;padding:0.8rem 1.5rem;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--radius);font-size:1rem;cursor:pointer;}
-    button:hover {background:#0056b3;}
-    #output a {display:block;margin:10px 0;}
-    footer {text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
-    footer a {color:inherit;text-decoration:underline;}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Poppins',sans-serif;}
+    body{min-height:100vh;background:var(--gradient-dark);color:var(--text-dark);transition:0.3s;}
+    body.light{background:var(--gradient-light);color:var(--text-light);}
+    header{display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;}
+    header a{text-decoration:none;color:inherit;font-size:1.6rem;font-weight:700;}
+    header .tagline{font-size:0.9rem;font-weight:400;}
+    .toggle{cursor:pointer;font-size:1.5rem;}
+    main{max-width:900px;margin:1rem auto;padding:1rem;}
+    h1{font-size:1.8rem;margin-bottom:0.5rem;text-align:center;}
+    p.desc{text-align:center;margin-bottom:1.5rem;}
+    .ads{margin:1.5rem 0;padding:1rem;border:2px dashed #777;border-radius:12px;text-align:center;font-size:0.9rem;}
+    .card{background:var(--card-dark);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+    body.light .card{background:var(--card-light);}
+    label{display:block;font-size:0.9rem;margin:12px 0 6px;}
+    input[type=file], select, button{width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:1rem;margin-bottom:12px;}
+    input[type=range]{width:100%;}
+    button{background:var(--primary);color:#fff;font-weight:600;cursor:pointer;border:none;}
+    button:disabled{opacity:0.6;cursor:not-allowed;}
+    .val{text-align:right;margin-bottom:10px;font-size:0.9rem;}
+    .out{margin-top:1rem;padding:12px;font-size:0.9rem;border:1px solid #444;border-radius:10px;white-space:pre-wrap;}
+    a.dl{display:inline-block;margin-top:1rem;padding:10px 14px;background:#18222a;border-radius:10px;text-decoration:none;color:#cfeaff;font-weight:600;}
+    footer{text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
+    footer a{color:inherit;text-decoration:underline;margin:0 5px;}
   </style>
+
+  <!-- lame.js loader -->
+  <script>
+    let lameLoaded=false;
+    async function ensureLame(){
+      if(lameLoaded) return true;
+      return new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://unpkg.com/lamejs@1.2.0/lame.min.js';
+        s.onload=()=>{lameLoaded=true;res(true)};
+        s.onerror=()=>rej(new Error('Failed to load lamejs'));
+        document.head.appendChild(s);
+      });
+    }
+  </script>
 </head>
 <body class="dark">
   <header>
-    <a href="/">Userific <span>Useful tools built just for you ✨</span></a>
+    <div>
+      <a href="/">Userific</a>
+      <div class="tagline">Useful tools built just for you ✨</div>
+    </div>
     <div class="toggle" id="themeToggle">☀️</div>
   </header>
 
   <main>
     <h1>Silence Remover</h1>
-    <p>Automatically remove silence from your audio files (MP3, WAV). Works in your browser, no upload required.</p>
+    <p class="desc">Upload an MP3/WAV. This tool removes long silences, keeping a 0.5s gap. Works locally in your browser. No login required.</p>
 
     <div class="ads">Ads will show here</div>
 
-    <div class="upload-box">
-      <label for="audioFile" class="file-label">Choose Audio File</label>
-      <input type="file" id="audioFile" accept="audio/*">
+    <div class="card">
+      <!-- Your working UI controls -->
+      <label>Choose MP3/WAV File</label>
+      <input id="file" type="file" accept="audio/*" />
 
-      <label for="threshold">Silence Threshold (dB)</label>
-      <input type="number" id="threshold" value="-40" min="-80" max="0">
+      <label>Silence threshold (dBFS)</label>
+      <input id="thresh" type="range" min="-80" max="-10" step="1" value="-45">
+      <div class="val"><span id="threshVal">-45</span> dB</div>
 
-      <label for="minDuration">Minimum Silence Duration (seconds)</label>
-      <input type="number" id="minDuration" value="0.5" step="0.1" min="0.1">
+      <label>Minimum silence to cut (seconds)</label>
+      <input id="minsil" type="range" min="0.1" max="2.0" step="0.1" value="0.3">
+      <div class="val"><span id="minsilVal">0.3</span> s</div>
 
-      <button id="processBtn">Remove Silence</button>
+      <label>Keep gap after cut (seconds)</label>
+      <input id="keepgap" type="range" min="0.2" max="1.0" step="0.1" value="0.5">
+      <div class="val"><span id="keepVal">0.5</span> s</div>
+
+      <select id="format">
+        <option value="mp3">Export MP3 (small)</option>
+        <option value="wav">Export WAV (lossless)</option>
+      </select>
+
+      <button id="analyze">Analyze</button>
+      <button id="process" disabled>Cut & Export</button>
+
+      <div id="out" class="out">Ready.</div>
+      <div id="links"></div>
     </div>
-
-    <div class="ads">Ads will show here</div>
-
-    <p id="status">Ready.</p>
-    <div id="output"></div>
 
     <div class="ads">Ads will show here</div>
   </main>
 
   <footer>
-    © 2025 Userific.xyz — All Rights Reserved |
-    <a href="/privacy.html">Privacy</a> | 
-    <a href="/terms.html">Terms</a> | 
-    <a href="/contact.html">Contact</a>
+    <p>&copy; <span id="year"></span> Userific.xyz – All Rights Reserved</p>
+    <p><a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms</a> | <a href="contact.html">Contact</a></p>
   </footer>
 
+  <!-- Your full working silence cutter JS -->
   <script>
-    const themeToggle = document.getElementById('themeToggle');
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('light');
-      themeToggle.textContent = document.body.classList.contains('light') ? '🌙' : '☀️';
-    });
+    document.getElementById("year").textContent=new Date().getFullYear();
 
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg({ log: true });
+    const fileInput=document.getElementById("file");
+    const thresh=document.getElementById("thresh");
+    const threshVal=document.getElementById("threshVal");
+    const minsil=document.getElementById("minsil");
+    const minsilVal=document.getElementById("minsilVal");
+    const keepgap=document.getElementById("keepgap");
+    const keepVal=document.getElementById("keepVal");
+    const analyzeBtn=document.getElementById("analyze");
+    const processBtn=document.getElementById("process");
+    const out=document.getElementById("out");
+    const links=document.getElementById("links");
+    const format=document.getElementById("format");
 
-    document.getElementById('processBtn').addEventListener('click', async () => {
-      const file = document.getElementById('audioFile').files[0];
-      const threshold = document.getElementById('threshold').value;
-      const minDuration = document.getElementById('minDuration').value;
-      const status = document.getElementById('status');
-      const output = document.getElementById('output');
+    let audioCtx, decoded, regions=[];
+    let fileBuffer;
 
-      if (!file) {
-        alert("Please choose an audio file first.");
-        return;
+    thresh.oninput=()=>threshVal.textContent=thresh.value;
+    minsil.oninput=()=>minsilVal.textContent=minsil.value;
+    keepgap.oninput=()=>keepVal.textContent=keepgap.value;
+
+    fileInput.onchange=async e=>{
+      const f=e.target.files[0];
+      if(!f) return;
+      fileBuffer=await f.arrayBuffer();
+      audioCtx=new AudioContext();
+      decoded=await audioCtx.decodeAudioData(fileBuffer.slice(0));
+      out.textContent=`Loaded ${f.name} (${decoded.duration.toFixed(1)}s)`;
+      processBtn.disabled=true;
+      regions=[];
+    };
+
+    analyzeBtn.onclick=()=>{
+      if(!decoded){alert("Load file first");return;}
+      const t=parseFloat(thresh.value);
+      const ms=parseFloat(minsil.value);
+      const gap=parseFloat(keepgap.value);
+      const ch=decoded.getChannelData(0);
+      const rate=decoded.sampleRate;
+      const frame=Math.floor(rate*0.01);
+      let sil=0, start=null, pos=0;
+      regions=[];
+      while(pos<ch.length){
+        let sum=0;
+        for(let i=0;i<frame && pos+i<ch.length;i++){
+          sum+=ch[pos+i]*ch[pos+i];
+        }
+        const rms=Math.sqrt(sum/frame);
+        const db=20*Math.log10(rms||1e-10);
+        if(db<t){sil+=frame/rate;}else{sil=0;}
+        if(sil>=ms && start===null){
+          start=(pos-frame*ms)/rate;
+        }
+        if(start!==null && db>=t){
+          let end=(pos/rate)+gap;
+          regions.push([start,end]);
+          start=null; sil=0;
+        }
+        pos+=frame;
       }
+      out.textContent=`Found ${regions.length} silent regions`;
+      processBtn.disabled=false;
+    };
 
-      status.textContent = "Loading FFmpeg...";
-      if (!ffmpeg.isLoaded()) {
-        await ffmpeg.load();
+    processBtn.onclick=async()=>{
+      if(!decoded||regions.length===0){alert("Analyze first");return;}
+      const fName=fileInput.files[0].name;
+      const ext=format.value;
+      const rate=decoded.sampleRate;
+      const chs=decoded.numberOfChannels;
+      const total=decoded.length;
+      let mask=new Uint8Array(total);mask.fill(1);
+      regions.forEach(r=>{
+        let s=Math.max(0,Math.floor(r[0]*rate));
+        let e=Math.min(total,Math.floor(r[1]*rate));
+        mask.fill(0,s,e);
+      });
+      const kept=[];
+      for(let i=0;i<total;i++){if(mask[i])kept.push(i);}
+      const newLen=kept.length;
+      const newBuf=audioCtx.createBuffer(chs,newLen,rate);
+      for(let c=0;c<chs;c++){
+        const old=decoded.getChannelData(c);
+        const nb=newBuf.getChannelData(c);
+        for(let i=0;i<newLen;i++){nb[i]=old[kept[i]];}
       }
-
-      status.textContent = "Processing...";
-      output.innerHTML = "";
-
-      const ext = file.name.split(".").pop().toLowerCase();
-      const inputName = "input." + ext;
-      const outputName = "output." + ext;
-
-      ffmpeg.FS('writeFile', inputName, await fetchFile(file));
-
-      try {
-        await ffmpeg.run(
-          "-i", inputName,
-          "-af", `silenceremove=stop_periods=-1:stop_duration=${minDuration}:stop_threshold=${threshold}dB`,
-          outputName
-        );
-
-        const data = ffmpeg.FS('readFile', outputName);
-        const mime = ext === "wav" ? "audio/wav" : "audio/mpeg";
-        const url = URL.createObjectURL(new Blob([data.buffer], { type: mime }));
-
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "cleaned-" + file.name;
-        link.textContent = "Download Processed Audio";
-        output.appendChild(link);
-
-        status.textContent = "Done!";
-      } catch (e) {
-        console.error(e);
-        status.textContent = "Error during processing. Try a different file.";
+      if(ext==="wav"){
+        const wav=encodeWAV(newBuf);
+        download(wav,"cleaned-"+fName.replace(/\.[^/.]+$/,"")+".wav","audio/wav");
+      }else{
+        await ensureLame();
+        const mp3=encodeMP3(newBuf);
+        download(mp3,"cleaned-"+fName.replace(/\.[^/.]+$/,"")+".mp3","audio/mpeg");
       }
+    };
+
+    function encodeWAV(buf){
+      const n=buf.getChannelData(0).length;
+      const chs=buf.numberOfChannels;
+      const rate=buf.sampleRate;
+      const out=new ArrayBuffer(44+n*chs*2);
+      const dv=new DataView(out);
+      let p=0;
+      const writeStr=s=>{for(let i=0;i<s.length;i++)dv.setUint8(p++,s.charCodeAt(i));};
+      const write32=v=>{dv.setUint32(p,v,true);p+=4;};
+      const write16=v=>{dv.setUint16(p,v,true);p+=2;};
+      writeStr("RIFF");write32(36+n*chs*2);writeStr("WAVEfmt ");write32(16);write16(1);write16(chs);write32(rate);write32(rate*chs*2);write16(chs*2);write16(16);writeStr("data");write32(n*chs*2);
+      for(let i=0;i<n;i++){for(let c=0;c<chs;c++){let s=Math.max(-1,Math.min(1,buf.getChannelData(c)[i]));dv.setInt16(p,s<0?s*0x8000:s*0x7fff,true);p+=2;}}
+      return out;
+    }
+
+    function encodeMP3(buf){
+      const chs=buf.numberOfChannels;
+      const rate=buf.sampleRate;
+      const mp3enc=new lamejs.Mp3Encoder(chs,rate,128);
+      const samples=buf.getChannelData(0);
+      let mp3=[];
+      const block=1152;
+      for(let i=0;i<samples.length;i+=block){
+        const s=samples.subarray(i,i+block);
+        const mono=Int16Array.from(s.map(v=>Math.max(-1,Math.min(1,v))*0x7fff));
+        const part=mp3enc.encodeBuffer(mono);
+        if(part.length>0)mp3.push(part);
+      }
+      const end=mp3enc.flush();
+      if(end.length>0)mp3.push(end);
+      return new Blob(mp3,{type:"audio/mpeg"});
+    }
+
+    function download(buf,name,type){
+      let blob;
+      if(buf instanceof ArrayBuffer){blob=new Blob([buf],{type});}
+      else{blob=buf;}
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;a.download=name;a.textContent="Download "+name;a.className="dl";
+      links.innerHTML="";links.appendChild(a);
+    }
+  </script>
+
+  <script>
+    // Theme toggle
+    const t=document.getElementById("themeToggle");
+    t.addEventListener("click",()=>{
+      document.body.classList.toggle("light");
+      t.textContent=document.body.classList.contains("light")?'🌙':'☀️';
     });
   </script>
 </body>
