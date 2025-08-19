@@ -4,146 +4,134 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF to PNG Converter – Free Online Tool | Userific</title>
-  <meta name="description" content="Convert PDF pages into high-quality PNG images online. Free, secure, no login required. Works directly in your browser with instant results.">
-  <meta name="keywords" content="pdf to png, pdf image converter, convert pdf to image, free pdf to png online, extract pdf pages as png, pdf to image tool, high resolution pdf converter, pdf to png free no login">
+  <meta name="description" content="Convert PDF to PNG images online instantly. Free, secure, no login required. Download all pages in one click as PNG or ZIP.">
+  <meta name="keywords" content="pdf to png, convert pdf to images, free pdf to png, export pdf pages as png, pdf converter online, no login pdf converter, batch pdf to image, download pdf pages as images">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
     :root {
-      --bg-light: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-      --bg-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-      --btn-bg: #007bff;
-      --btn-text: #fff;
-      --radius: 10px;
+      --gradient-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      --gradient-light: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      --card-dark: rgba(30,30,30,0.85);
+      --card-light: rgba(255,255,255,0.9);
+      --text-dark: #f5f5f5;
+      --text-light: #111;
+      --primary: #2a7cff;
     }
-    * {margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
-    body {background: var(--bg-light);color:#111;transition:background 0.3s,color 0.3s;}
-    body.dark {background: var(--bg-dark);color:#f5f5f5;}
-    header {display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;}
-    header a {text-decoration:none;color:inherit;font-weight:600;font-size:1.3rem;}
-    header span {display:block;font-size:0.85rem;font-weight:400;}
-    .toggle {cursor:pointer;font-size:1.5rem;}
-    main {max-width:800px;margin:2rem auto;padding:1rem;text-align:center;}
-    h1 {margin-bottom:1rem;font-size:1.8rem;}
-    .ads {margin:1.5rem 0;padding:1rem;border:2px dashed #999;border-radius:var(--radius);opacity:0.8;font-size:0.9rem;}
-    .upload-box {padding:2rem;border-radius:var(--radius);box-shadow:0 4px 10px rgba(0,0,0,0.1);background:rgba(255,255,255,0.05);margin-bottom:2rem;}
-    input[type="file"] {display:none;}
-    .file-label {display:inline-block;padding:0.7rem 1.4rem;background:var(--btn-bg);color:var(--btn-text);border-radius:var(--radius);cursor:pointer;font-weight:500;}
-    select, input {margin-top:1rem;width:100%;padding:0.6rem;border-radius:var(--radius);border:1px solid #ccc;}
-    button {margin-top:1rem;padding:0.8rem 1.5rem;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--radius);font-size:1rem;cursor:pointer;}
-    button:hover {background:#0056b3;}
-    #output img {max-width:100%;margin:10px 0;border:1px solid #ddd;border-radius:var(--radius);}
-    footer {text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
-    footer a {color:inherit;text-decoration:underline;}
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+    body{min-height:100vh;background:var(--gradient-dark);color:var(--text-dark);}
+    body.light{background:var(--gradient-light);color:var(--text-light);}
+    header{display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;}
+    header a{text-decoration:none;color:inherit;font-size:1.6rem;font-weight:700;}
+    header .tagline{font-size:0.9rem;font-weight:400;}
+    .toggle{cursor:pointer;font-size:1.5rem;}
+    main{max-width:900px;margin:1rem auto;padding:1rem;}
+    h1{font-size:1.8rem;margin-bottom:0.5rem;text-align:center;}
+    p.desc{text-align:center;margin-bottom:1.5rem;}
+    .ads{margin:1.5rem 0;padding:1rem;border:2px dashed #777;border-radius:12px;text-align:center;font-size:0.9rem;}
+    .card{background:var(--card-dark);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+    body.light .card{background:var(--card-light);}
+    label{display:block;font-size:0.9rem;margin:12px 0 6px;}
+    input[type=file],button{width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:1rem;margin-bottom:12px;}
+    button{background:var(--primary);color:#fff;font-weight:600;cursor:pointer;border:none;}
+    button:disabled{opacity:0.6;cursor:not-allowed;}
+    #output{margin-top:1rem;text-align:center;}
+    #output img{max-width:100%;margin-bottom:10px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+    footer{text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
+    footer a{color:inherit;text-decoration:underline;margin:0 5px;}
   </style>
 </head>
-<body>
+<body class="dark">
   <header>
-    <a href="/">Userific <span>Useful tools built just for you ✨</span></a>
-    <div class="toggle" id="themeToggle">🌙</div>
+    <div>
+      <a href="/">Userific</a>
+      <div class="tagline">Useful tools built just for you ✨</div>
+    </div>
+    <div class="toggle" id="themeToggle">☀️</div>
   </header>
 
   <main>
     <h1>PDF to PNG Converter</h1>
-    <p>Convert PDF pages into high-quality PNG images instantly. Secure, fast, and works directly in your browser.</p>
+    <p class="desc">Convert every page of your PDF into a PNG image in its original aspect ratio. Download individually or all at once in a ZIP. 100% free, secure, no login required.</p>
 
     <div class="ads">Ads will show here</div>
 
-    <div class="upload-box">
-      <label for="pdfFile" class="file-label">Choose PDF File</label>
-      <input type="file" id="pdfFile" accept="application/pdf">
-
-      <label for="scale">Output Resolution</label>
-      <select id="scale">
-        <option value="1">Standard</option>
-        <option value="2">HD (1080p)</option>
-        <option value="3">QHD (1440p)</option>
-        <option value="4">4K</option>
-      </select>
-
-      <label for="pages">Pages to Convert (comma separated)</label>
-      <input type="text" id="pages" placeholder="Leave blank to convert all pages">
-
-      <button id="convertBtn">Convert PDF</button>
+    <div class="card">
+      <label>Choose a PDF file</label>
+      <input type="file" id="pdfFile" accept="application/pdf" />
+      <button id="convertBtn" disabled>Convert PDF to PNG</button>
+      <button id="downloadZipBtn" disabled>Download All as ZIP</button>
+      <div id="output"></div>
     </div>
-
-    <div class="ads">Ads will show here</div>
-
-    <p id="status">Ready.</p>
-    <div id="output"></div>
 
     <div class="ads">Ads will show here</div>
   </main>
 
   <footer>
-    © 2025 Userific.xyz — All Rights Reserved |
-    <a href="/privacy.html">Privacy</a> | 
-    <a href="/terms.html">Terms</a> | 
-    <a href="/contact.html">Contact</a>
+    <p>&copy; <span id="year"></span> Userific.xyz – All Rights Reserved</p>
+    <p><a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms</a> | <a href="contact.html">Contact</a></p>
   </footer>
 
   <script>
-    const themeToggle = document.getElementById('themeToggle');
-    themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+    document.getElementById("year").textContent=new Date().getFullYear();
+    const themeToggle=document.getElementById("themeToggle");
+    themeToggle.addEventListener("click",()=>{
+      document.body.classList.toggle("light");
+      themeToggle.textContent=document.body.classList.contains("light")?'🌙':'☀️';
     });
 
-    document.getElementById('convertBtn').addEventListener('click', async () => {
-      const file = document.getElementById('pdfFile').files[0];
-      const scale = parseInt(document.getElementById('scale').value);
-      const pagesInput = document.getElementById('pages').value.trim();
-      const output = document.getElementById('output');
-      const status = document.getElementById('status');
+    const pdfInput=document.getElementById("pdfFile");
+    const convertBtn=document.getElementById("convertBtn");
+    const downloadZipBtn=document.getElementById("downloadZipBtn");
+    const output=document.getElementById("output");
+    let renderedImages=[];
 
-      if (!file) {
-        alert("Please choose a PDF file first.");
-        return;
+    pdfInput.addEventListener("change",()=>{convertBtn.disabled=!pdfInput.files.length;});
+
+    convertBtn.addEventListener("click",async()=>{
+      if(!pdfInput.files.length) return;
+      const file=pdfInput.files[0];
+      const url=URL.createObjectURL(file);
+      const pdf=await pdfjsLib.getDocument(url).promise;
+      output.innerHTML="";
+      renderedImages=[];
+
+      for(let i=1;i<=pdf.numPages;i++){
+        const page=await pdf.getPage(i);
+        const viewport=page.getViewport({scale:2}); // higher res
+        const canvas=document.createElement("canvas");
+        const ctx=canvas.getContext("2d");
+        canvas.width=viewport.width;
+        canvas.height=viewport.height;
+        await page.render({canvasContext:ctx,viewport:viewport}).promise;
+        const dataUrl=canvas.toDataURL("image/png");
+        renderedImages.push({name:`page-${i}.png`,dataUrl});
+        const img=document.createElement("img");
+        img.src=dataUrl;
+        output.appendChild(img);
+        const dl=document.createElement("a");
+        dl.href=dataUrl;
+        dl.download=`page-${i}.png`;
+        dl.textContent=`Download Page ${i}`;
+        dl.className="dl";
+        output.appendChild(dl);
       }
 
-      output.innerHTML = "";
-      status.textContent = "Processing...";
+      if(renderedImages.length>1) downloadZipBtn.disabled=false;
+    });
 
-      const fileReader = new FileReader();
-      fileReader.onload = async function() {
-        const typedarray = new Uint8Array(this.result);
-        const pdf = await pdfjsLib.getDocument(typedarray).promise;
-
-        let pageNumbers = [];
-        if (pagesInput) {
-          pageNumbers = pagesInput.split(",").map(p=>parseInt(p.trim())).filter(p=>!isNaN(p));
-        } else {
-          pageNumbers = Array.from({length: pdf.numPages}, (_, i) => i+1);
-        }
-
-        for (let num of pageNumbers) {
-          if (num < 1 || num > pdf.numPages) continue;
-
-          const page = await pdf.getPage(num);
-          const viewport = page.getViewport({ scale: scale });
-          const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d");
-          canvas.height = viewport.height;
-          canvas.width = viewport.width;
-
-          await page.render({canvasContext: context, viewport: viewport}).promise;
-
-          const img = document.createElement("img");
-          img.src = canvas.toDataURL("image/png");
-          output.appendChild(img);
-
-          // Add download link
-          const link = document.createElement("a");
-          link.href = img.src;
-          link.download = `page-${num}.png`;
-          link.textContent = `Download Page ${num}`;
-          link.style.display = "block";
-          output.appendChild(link);
-        }
-
-        status.textContent = "Done!";
-      };
-      fileReader.readAsArrayBuffer(file);
+    downloadZipBtn.addEventListener("click",()=>{
+      if(renderedImages.length===0) return;
+      const zip=new JSZip();
+      renderedImages.forEach(img=>{
+        const base64=img.dataUrl.split(",")[1];
+        zip.file(img.name,base64,{base64:true});
+      });
+      zip.generateAsync({type:"blob"}).then(content=>{
+        saveAs(content,"pdf-pages.zip");
+      });
     });
   </script>
 </body>
