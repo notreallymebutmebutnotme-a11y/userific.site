@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Silence Remover – MP3/WAV | Userific</title>
-  <meta name="description" content="Remove silence from MP3/WAV audio files online. Free, no login required. Perfect for podcasts, voiceovers, lectures, and music editing.">
+  <meta name="description" content="Remove silence from MP3 or WAV audio files online. Free, no login required. Perfect for podcasts, voiceovers, and music editing.">
   <meta name="keywords" content="silence remover, cut silence mp3, remove gaps audio, podcast silence cutter, voiceover silence remover, free audio editing, no login audio tool, automatic silence detection, audio cleanup, Userific">
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
@@ -12,34 +12,34 @@
     :root {
       --gradient-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
       --gradient-light: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-      --card-dark: rgba(30,30,30,0.9);
+      --card-dark: rgba(30,30,30,0.92);
       --card-light: rgba(255,255,255,0.95);
       --primary: #2a7cff;
     }
-    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
-    body{min-height:100vh;background:var(--gradient-dark);color:#f5f5f5;display:flex;flex-direction:column;}
-    body.light{background:var(--gradient-light);color:#111;}
-    header{padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
-    header h1{font-size:1.6rem;font-weight:700;margin-bottom:2px;}
-    header h1 a{text-decoration:none;color:inherit;}
-    header .tagline{font-size:0.9rem;font-weight:400;opacity:0.9;}
-    .toggle{cursor:pointer;font-size:1.5rem;background:transparent;border:none;outline:none;line-height:1;}
-    .toggle:hover,.toggle:focus{opacity:0.9;text-decoration:none;}
-    main{flex:1;max-width:900px;margin:1rem auto;padding:1rem;width:100%;}
-    .ads{margin:1rem 0;padding:1rem;border:2px dashed #777;border-radius:12px;text-align:center;font-size:0.9rem;}
-    .card{background:var(--card-dark);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
-    body.light .card{background:var(--card-light);}
-    label{display:block;font-size:0.9rem;margin:12px 0 6px;}
-    input[type=file], select, button{width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:1rem;margin-bottom:12px;}
-    button{background:var(--primary);color:#fff;font-weight:600;cursor:pointer;border:none;}
-    button:disabled{opacity:0.6;cursor:not-allowed;}
-    input[type=range]{width:100%;}
-    .row{display:grid;grid-template-columns:1fr 100px;gap:12px;align-items:center;}
-    .val{text-align:right;font-size:0.9rem;}
-    #out{margin-top:1rem;padding:12px;border-radius:12px;background:rgba(0,0,0,0.3);min-height:60px;white-space:pre-wrap;}
-    a.dl{display:inline-block;margin-top:12px;padding:10px 14px;border-radius:10px;background:#18222a;color:#cfeaff;text-decoration:none;font-weight:600;}
-    footer{text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
-    footer a{color:inherit;text-decoration:underline;margin:0 5px;}
+    * {margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+    body {min-height:100vh;background:var(--gradient-dark);color:#f5f5f5;display:flex;flex-direction:column;}
+    body.light {background:var(--gradient-light);color:#111;}
+    header {padding:15px 20px;display:flex;justify-content:space-between;align-items:center;}
+    header h1 {font-size:1.6rem;font-weight:700;margin-bottom:2px;}
+    header h1 a {text-decoration:none;color:inherit;}
+    header .tagline {font-size:0.9rem;font-weight:400;opacity:0.9;}
+    .toggle {cursor:pointer;font-size:1.6rem;background:transparent;border:none;outline:none;line-height:1;}
+    .toggle:hover,.toggle:focus {opacity:0.9;text-decoration:none;}
+    main {flex:1;max-width:900px;margin:1rem auto;padding:1rem;width:100%;}
+    .ads {margin:1rem 0;padding:1rem;border:2px dashed #777;border-radius:12px;text-align:center;font-size:0.9rem;}
+    .card {background:var(--card-dark);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+    body.light .card {background:var(--card-light);}
+    label {display:block;font-size:0.9rem;margin:12px 0 6px;}
+    input[type=file], select, button {width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:1rem;margin-bottom:12px;}
+    button {background:var(--primary);color:#fff;font-weight:600;cursor:pointer;border:none;}
+    button:disabled {opacity:0.6;cursor:not-allowed;}
+    input[type=range] {width:100%;}
+    .row {display:grid;grid-template-columns:1fr 100px;gap:12px;align-items:center;}
+    .val {text-align:right;font-size:0.9rem;}
+    #out {margin-top:1rem;padding:12px;border-radius:12px;background:rgba(0,0,0,0.3);min-height:60px;white-space:pre-wrap;}
+    a.dl {display:inline-block;margin-top:12px;padding:10px 14px;border-radius:10px;background:#18222a;color:#cfeaff;text-decoration:none;font-weight:600;}
+    footer {text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
+    footer a {color:inherit;text-decoration:underline;margin:0 5px;}
   </style>
 
   <!-- MP3 encoder (lazy-loaded when needed) -->
@@ -119,7 +119,7 @@
 
   <footer>
     <p>&copy; <span id="year"></span> Userific.xyz – All Rights Reserved</p>
-    <p><a href="/privacy.html">Privacy Policy</a> | <a href="/terms.html">Terms</a> | <a href="/contact.html">Contact</a></p>
+    <p><a href="privacy.html">Privacy Policy</a> | <a href="terms.html">Terms</a> | <a href="contact.html">Contact</a></p>
   </footer>
 
   <script>
@@ -131,7 +131,7 @@
     });
   </script>
 
-  <!-- Silence remover logic -->
+  <!-- Full Silence remover logic -->
   <script>
     const fileInput = document.getElementById("file");
     const analyzeBtn = document.getElementById("analyze");
@@ -150,6 +150,7 @@
     let audioBuffer = null;
     let cuts = [];
 
+    // live slider updates
     threshSlider.oninput = () => { threshVal.textContent = threshSlider.value; };
     minSilSlider.oninput = () => { minSilVal.textContent = minSilSlider.value; };
     keepGapSlider.oninput = () => { keepVal.textContent = keepGapSlider.value; };
@@ -166,6 +167,7 @@
       return 20 * Math.log10(rms || 1e-10);
     }
 
+    // detect silence segments
     function analyzeBuffer(buffer, threshold, minSil) {
       const data = buffer.getChannelData(0);
       const sr = buffer.sampleRate;
@@ -342,16 +344,4 @@
         const slice = samples.subarray(i, i + maxSamples);
         const pcm = new Int16Array(slice.length);
         for (let j = 0; j < slice.length; j++) {
-          const s = Math.max(-1, Math.min(1, slice[j]));
-          pcm[j] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-        const enc = mp3encoder.encodeBuffer(pcm);
-        if (enc.length > 0) mp3Data.push(enc);
-      }
-      const end = mp3encoder.flush();
-      if (end.length > 0) mp3Data.push(end);
-      return new Blob(mp3Data, { type: "audio/mpeg" });
-    }
-  </script>
-</body>
-</html>
+          const s = Math.max(-1
