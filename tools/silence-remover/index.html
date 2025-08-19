@@ -17,8 +17,8 @@
       --radius: 10px;
     }
     * {margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
-    body {background: var(--bg-light);color:#111;transition:background 0.3s,color 0.3s;}
-    body.dark {background: var(--bg-dark);color:#f5f5f5;}
+    body {background: var(--bg-dark);color:#f5f5f5;transition:background 0.3s,color 0.3s;}
+    body.light {background: var(--bg-light);color:#111;}
     header {display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;}
     header a {text-decoration:none;color:inherit;font-weight:600;font-size:1.3rem;}
     header span {display:block;font-size:0.85rem;font-weight:400;}
@@ -29,7 +29,7 @@
     .upload-box {padding:2rem;border-radius:var(--radius);box-shadow:0 4px 10px rgba(0,0,0,0.1);background:rgba(255,255,255,0.05);margin-bottom:2rem;}
     input[type="file"] {display:none;}
     .file-label {display:inline-block;padding:0.7rem 1.4rem;background:var(--btn-bg);color:var(--btn-text);border-radius:var(--radius);cursor:pointer;font-weight:500;}
-    input, select {margin-top:1rem;width:100%;padding:0.6rem;border-radius:var(--radius);border:1px solid #ccc;}
+    input {margin-top:1rem;width:100%;padding:0.6rem;border-radius:var(--radius);border:1px solid #ccc;}
     button {margin-top:1rem;padding:0.8rem 1.5rem;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--radius);font-size:1rem;cursor:pointer;}
     button:hover {background:#0056b3;}
     #output a {display:block;margin:10px 0;}
@@ -37,10 +37,10 @@
     footer a {color:inherit;text-decoration:underline;}
   </style>
 </head>
-<body>
+<body class="dark">
   <header>
     <a href="/">Userific <span>Useful tools built just for you ✨</span></a>
-    <div class="toggle" id="themeToggle">🌙</div>
+    <div class="toggle" id="themeToggle">☀️</div>
   </header>
 
   <main>
@@ -80,8 +80,8 @@
   <script>
     const themeToggle = document.getElementById('themeToggle');
     themeToggle.addEventListener('click', () => {
-      document.body.classList.toggle('dark');
-      themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+      document.body.classList.toggle('light');
+      themeToggle.textContent = document.body.classList.contains('light') ? '🌙' : '☀️';
     });
 
     const { createFFmpeg, fetchFile } = FFmpeg;
@@ -107,29 +107,34 @@
       status.textContent = "Processing...";
       output.innerHTML = "";
 
-      // Input & output filenames
-      const inputName = "input." + file.name.split(".").pop();
-      const outputName = "output.mp3";
+      const ext = file.name.split(".").pop().toLowerCase();
+      const inputName = "input." + ext;
+      const outputName = "output." + ext;
 
       ffmpeg.FS('writeFile', inputName, await fetchFile(file));
 
-      // ffmpeg command: remove silence
-      await ffmpeg.run(
-        "-i", inputName,
-        "-af", `silenceremove=start_periods=1:start_threshold=${threshold}dB:start_silence=${minDuration}:stop_periods=-1:stop_threshold=${threshold}dB:stop_silence=${minDuration}`,
-        outputName
-      );
+      try {
+        await ffmpeg.run(
+          "-i", inputName,
+          "-af", `silenceremove=stop_periods=-1:stop_duration=${minDuration}:stop_threshold=${threshold}dB`,
+          outputName
+        );
 
-      const data = ffmpeg.FS('readFile', outputName);
-      const url = URL.createObjectURL(new Blob([data.buffer], { type: "audio/mpeg" }));
+        const data = ffmpeg.FS('readFile', outputName);
+        const mime = ext === "wav" ? "audio/wav" : "audio/mpeg";
+        const url = URL.createObjectURL(new Blob([data.buffer], { type: mime }));
 
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "cleaned-" + file.name.replace(/\.[^/.]+$/, "") + ".mp3";
-      link.textContent = "Download Processed Audio";
-      output.appendChild(link);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "cleaned-" + file.name;
+        link.textContent = "Download Processed Audio";
+        output.appendChild(link);
 
-      status.textContent = "Done!";
+        status.textContent = "Done!";
+      } catch (e) {
+        console.error(e);
+        status.textContent = "Error during processing. Try a different file.";
+      }
     });
   </script>
 </body>
