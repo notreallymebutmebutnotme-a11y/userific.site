@@ -34,7 +34,7 @@
     .card{background:var(--card-dark);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
     body.light .card{background:var(--card-light);}
     label{display:block;font-size:0.9rem;margin:12px 0 6px;}
-    input[type=file],button{width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:1rem;margin-bottom:12px;}
+    input[type=file], select, button{width:100%;padding:12px;border-radius:12px;border:1px solid #ccc;font-size:1rem;margin-bottom:12px;}
     button{background:var(--primary);color:#fff;font-weight:600;cursor:pointer;border:none;}
     button:disabled{opacity:0.6;cursor:not-allowed;}
     #output{margin-top:1rem;text-align:center;}
@@ -61,6 +61,15 @@
     <div class="card">
       <label>Choose a PDF file</label>
       <input type="file" id="pdfFile" accept="application/pdf" />
+
+      <label>Image Scale</label>
+      <select id="scaleSelect">
+        <option value="1">Standard (1x)</option>
+        <option value="1.5">High (1.5x)</option>
+        <option value="2" selected>Very High (2x)</option>
+        <option value="4">Ultra (4x)</option>
+      </select>
+
       <button id="convertBtn" disabled>Convert PDF to PNG</button>
       <button id="downloadZipBtn" disabled>Download All as ZIP</button>
       <div id="output"></div>
@@ -85,6 +94,7 @@
     const pdfInput=document.getElementById("pdfFile");
     const convertBtn=document.getElementById("convertBtn");
     const downloadZipBtn=document.getElementById("downloadZipBtn");
+    const scaleSelect=document.getElementById("scaleSelect");
     const output=document.getElementById("output");
     let renderedImages=[];
 
@@ -98,14 +108,16 @@
       output.innerHTML="";
       renderedImages=[];
 
+      const scale=parseFloat(scaleSelect.value);
+
       for(let i=1;i<=pdf.numPages;i++){
         const page=await pdf.getPage(i);
-        const viewport=page.getViewport({scale:2}); // higher res
+        const viewport=page.getViewport({scale});
         const canvas=document.createElement("canvas");
         const ctx=canvas.getContext("2d");
         canvas.width=viewport.width;
         canvas.height=viewport.height;
-        await page.render({canvasContext:ctx,viewport:viewport}).promise;
+        await page.render({canvasContext:ctx,viewport}).promise;
         const dataUrl=canvas.toDataURL("image/png");
         renderedImages.push({name:`page-${i}.png`,dataUrl});
         const img=document.createElement("img");
