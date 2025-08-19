@@ -1,144 +1,729 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>PDF + Audio → Video Tool</title>
-</head>
-<body>
-  <h2>PDF + Audio to Video</h2>
-  <input type="file" id="pdfFile" accept="application/pdf" />
-  <input type="file" id="audioFile" accept="audio/*" />
-  <select id="resolution">
-    <option value="1080">1080p</option>
-    <option value="1440">1440p</option>
-    <option value="2160">4K</option>
-  </select>
-  <button id="processBtn">Process</button>
-  <button id="exportBtn">Export Video</button>
-  <div id="progress">Idle</div>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Userific PDF → Audio Sync Video Tool</title>
+  <!-- ============ External libs (CDN) ============ -->
   <!-- PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <!-- Tesseract.js for OCR -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
-  <!-- ffmpeg.wasm via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
-
+  <script src="https://unpkg.com/pdfjs-dist@4.6.82/build/pdf.min.js"></script>
   <script>
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg({
-      log: true,
-      corePath: "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/ffmpeg-core.js"
+    // Set worker for PDF.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://unpkg.com/pdfjs-dist@4.6.82/build/pdf.worker.min.js";
+  </script>
+  <!-- Tesseract.js for OCR (fallback when PDF has no selectable text) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- Transformers.js for in-browser Whisper transcription (English) -->
+  <script type="module" id="transformers-loader">
+    import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.13.0';
+    // Reduce console noise and use WASM/WASM+WebGPU automatically
+    env.allowLocalModels = false; // fetch from HF CDN
+    env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.0/dist/';// Create and expose a singleton ASR pipeline on window for later use.
+(async () => {
+  const status = (msg) => document.getElementById('status').textContent = msg;
+  status('Loading speech model (Whisper tiny.en)… first time takes a while');
+  try {
+    const asr = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+    window.__USERIFIC_ASR__ = asr;
+    status('Speech model ready.');
+  } catch (e) {
+    console.error(e);
+    status('Failed to load speech model. You can still upload a transcript (.txt/.srt/.vtt).');
+  }
+})();
+
+  </script>
+  <!-- ffmpeg.wasm (lazy-loaded later only when converting to MP4 / audio) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/umd/index.min.js"></script>  <style>
+    :root{
+      --bg:#0b0f15;            /* Userific-ish dark */
+      --panel:#0f1622;
+      --muted:#9fb0c0;
+      --text:#e6edf3;
+      --accent:#6ae3ff;
+      --accent-2:#66ffa6;
+      --warn:#ffd166;
+      --danger:#ff6b6b;
+      --radius:18px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:radial-gradient(1200px 700px at 20% -10%, #122136 0%, var(--bg) 42%), var(--bg);
+      color:var(--text); font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
+    }
+    header{
+      max-width:1100px; margin:24px auto 8px; padding:0 16px;
+      display:flex; align-items:center; gap:14px;
+    }
+    .logo{
+      width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, var(--accent), var(--accent-2));
+      display:grid; place-items:center; color:#001923; font-weight:800; box-shadow:var(--shadow)
+    }
+    h1{font-size:clamp(20px,2.4vw,28px); margin:0}
+    main{max-width:1100px; margin:12px auto 32px; padding:0 16px;}
+
+    .panel{
+      background:var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:18px; margin-bottom:16px;
+    }
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    @media (max-width:900px){ .row{grid-template-columns:1fr} }
+
+    label{font-size:13px; color:var(--muted); margin-bottom:6px; display:block}
+    input[type=file], select, button, input[type=number], input[type=text]{
+      width:100%; padding:12px 14px; background:#0b1320; color:var(--text);
+      border:1px solid rgba(255,255,255,.08); border-radius:14px; outline:none;
+    }
+    button{
+      background:linear-gradient(135deg, var(--accent), var(--accent-2));
+      color:#04141a; font-weight:700; cursor:pointer; border:none;
+      transition:transform .05s ease, filter .2s ease; box-shadow:var(--shadow);
+    }
+    button:hover{filter:brightness(1.05)}
+    button:active{transform:translateY(1px)}
+
+    .tip{font-size:14px; color:#e9f5ff; background:#0b1220; border:1px dashed rgba(255,255,255,.15);
+      padding:12px 14px; border-radius:14px}
+
+    #status{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size:13px; color:var(--muted)}
+
+    .preview-wrap{ position:relative; aspect-ratio:16/9; background:#000; border-radius:16px; overflow:hidden }
+    canvas#stage{ width:100%; height:100%; display:block }
+
+    .progress{height:8px; background:#0b1320; border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,.06)}
+    .bar{height:100%; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent-2))}
+
+    table{ width:100%; border-collapse:collapse; font-size:13px}
+    th,td{ padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.06)}
+    th{ color:var(--muted); text-align:left }
+    .right{ text-align:right }
+    .muted{ color:var(--muted) }
+    .danger{ color:var(--danger) }
+
+    .actions{ display:flex; gap:10px; flex-wrap:wrap }
+    .small{ font-size:12px; padding:8px 10px; border-radius:10px }
+
+  </style></head>
+<body>
+  <header>
+    <div class="logo">U</div>
+    <div>
+      <h1>Userific PDF → Audio Sync Video Tool</h1>
+      <div id="status">Load your PDF and audio to begin.</div>
+    </div>
+  </header>  <main>
+    <section class="panel">
+      <div class="tip">⚠️ <b>Do not close this tab</b> or switch away while processing. Everything runs in your browser.</div>
+    </section><section class="panel">
+  <div class="row">
+    <div>
+      <label>Upload PDF</label>
+      <input type="file" id="pdfInput" accept="application/pdf" />
+    </div>
+    <div>
+      <label>Upload Audio (MP3 or WAV, English)</label>
+      <input type="file" id="audioInput" accept="audio/*" />
+    </div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <div>
+      <label>Optional: Upload Transcript (.txt / .srt / .vtt)</label>
+      <input type="file" id="transcriptInput" accept=".txt,.srt,.vtt" />
+    </div>
+    <div>
+      <label>Resolution (16:9, 30fps)</label>
+      <select id="resolution">
+        <option value="1920x1080">1080p (1920×1080)</option>
+        <option value="2560x1440">1440p (2560×1440)</option>
+        <option value="3840x2160">4K (3840×2160)</option>
+      </select>
+    </div>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <div>
+      <label>Fade Duration (ms)</label>
+      <input type="number" id="fadeMs" value="500" min="0" step="50" />
+    </div>
+    <div>
+      <label>Audio Options</label>
+      <div class="actions">
+        <label style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" id="normalizeAudio" checked /> Normalize audio
+        </label>
+        <label style="display:flex;gap:8px;align-items:center">
+          <input type="checkbox" id="monoAudio" checked /> Force mono 48kHz
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="actions" style="margin-top:12px">
+    <button id="analyzeBtn">Analyze (OCR + Transcribe + Align)</button>
+    <button id="renderBtn" disabled>Render Video</button>
+    <button id="stopBtn" class="small" disabled>Stop</button>
+  </div>
+  <div style="margin-top:12px">
+    <div class="progress"><div id="progressBar" class="bar"></div></div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="preview-wrap">
+    <canvas id="stage"></canvas>
+  </div>
+  <div class="actions" style="margin-top:12px">
+    <button id="downloadWebmBtn" class="small" disabled>Download WEBM</button>
+    <button id="toMp4Btn" class="small" disabled>Convert to MP4 (beta)</button>
+    <button id="downloadMp4Btn" class="small" disabled>Download MP4</button>
+  </div>
+  <div class="muted" style="margin-top:6px">Note: WEBM downloads instantly. MP4 conversion runs in-browser using ffmpeg.wasm (slower).</div>
+</section>
+
+<section class="panel">
+  <h3 style="margin-top:0">Detected Page Alignment</h3>
+  <div class="muted" style="margin-bottom:8px">You can review the computed timings. If transcription fails or looks off, upload a transcript file to guide alignment.</div>
+  <table id="alignTable">
+    <thead>
+      <tr><th>#</th><th>Start (s)</th><th>End (s)</th><th>Duration</th><th>Confidence</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
+
+  </main>  <script>
+  // ------------------------------
+  // Utilities
+  // ------------------------------
+  const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
+  const setStatus = (t)=> document.getElementById('status').textContent = t;
+  const setProgress = (p)=> document.getElementById('progressBar').style.width = Math.max(0, Math.min(100, p*100)).toFixed(1)+'%';
+
+  function seconds(s){ return (Math.round(s*100)/100).toFixed(2) }
+
+  function parseTranscript(text){
+    // Accept .txt (plain), .srt, or .vtt
+    // Return array of { start, end, text }
+    const lines = text.replace(/\r/g,'').split(/\n+/);
+    const blocks=[];
+    let i=0;
+    const timeRe = /(?:(\d+):)?(\d{2}):(\d{2})[\.,](\d{3})/;
+    const toSec = m => (parseInt(m[1]||'0')*3600 + parseInt(m[2])*60 + parseInt(m[3]) + parseInt(m[4])/1000);
+
+    if(text.includes('-->')){ // srt/vtt
+      while(i<lines.length){
+        let l = lines[i].trim();
+        if(!l){ i++; continue; }
+        // skip index number line (SRT)
+        if(/^\d+$/.test(l) && lines[i+1] && lines[i+1].includes('-->')){ i++; l = lines[i].trim(); }
+        if(l.includes('-->')){
+          const [a,b] = l.split('-->').map(s=>s.trim());
+          const ma = timeRe.exec(a), mb = timeRe.exec(b);
+          if(ma && mb){
+            let j=i+1, textLines=[];
+            while(j<lines.length && lines[j].trim()){ textLines.push(lines[j].trim()); j++; }
+            blocks.push({ start: toSec(ma), end: toSec(mb), text: textLines.join(' ') });
+            i=j; continue;
+          }
+        }
+        i++;
+      }
+    } else { // plain text → single block (start=0, end unknown)
+      blocks.push({start:0, end:null, text: text.trim()});
+    }
+    return blocks;
+  }
+
+  function tokenize(s){
+    return s.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean);
+  }
+
+  function topKeywords(text, k=20){
+    const words = tokenize(text).filter(w=>w.length>2);
+    const stop = new Set(['the','and','for','that','this','with','from','your','you','are','was','were','have','has','had','but','not','all','any','can','will','its','our','now','let','lets','look','next','page','section','slide','financials','financial','overview','summary','introduction','conclusion']);
+    const freq = new Map();
+    for(const w of words){ if(!stop.has(w)) freq.set(w,(freq.get(w)||0)+1); }
+    return [...freq.entries()].sort((a,b)=>b[1]-a[1]).slice(0,k).map(([w])=>w);
+  }
+
+  // Sliding window keyword match over transcript words with timestamps
+  function alignPagesByKeywords(pages, words){
+    // pages: [{idx, keywords:[], rawText:""}]
+    // words: [{word, start, end}]
+    const windowSec = 6; // sliding window size
+    const stepSec = 0.5;
+    const lastTime = words.length ? words[words.length-1].end : 0;
+
+    const windows=[]; // [{t, tokens:[..]}]
+    let t=0;
+    while(t <= lastTime){
+      const tokens = words.filter(w=> w.start >= t && w.end <= t+windowSec).map(w=>w.word);
+      windows.push({ t, tokens });
+      t += stepSec;
+    }
+
+    const scoresPerPage = pages.map(p=>{
+      const keyset = new Set(p.keywords);
+      const scores = windows.map(win=>{
+        let m=0; for(const w of win.tokens){ if(keyset.has(w)) m++; }
+        return { t: win.t, score: m };
+      });
+      return scores;
     });
 
-    const progressEl = document.getElementById("progress");
-    const pdfInput = document.getElementById("pdfFile");
-    const audioInput = document.getElementById("audioFile");
-    const resInput = document.getElementById("resolution");
-
-    let audioFile, pdfFile, audioWav, pdfPages = [];
-
-    function setProgress(msg) {
-      progressEl.textContent = msg;
-      console.log(msg);
+    // Greedy monotonic pick of best windows in order
+    const picks=[];
+    let lastT = 0;
+    for(let i=0;i<pages.length;i++){
+      const scores = scoresPerPage[i].filter(s=> s.t >= lastT);
+      if(!scores.length){ picks.push({start:lastT, score:0}); continue; }
+      const best = scores.reduce((a,b)=> b.score>a.score?b:a, {t:lastT,score:0});
+      picks.push({ start: best.t, score: best.score });
+      lastT = best.t + 1; // ensure forward progress
     }
 
-    async function loadFFmpeg() {
-      if (!ffmpeg.isLoaded()) {
-        setProgress("Loading ffmpeg.wasm core from CDN...");
-        await ffmpeg.load();
-        setProgress("ffmpeg.wasm ready ✅");
+    // Convert to segments [start_i, end_i)
+    const segments=[];
+    for(let i=0;i<picks.length;i++){
+      const start = picks[i].start;
+      const end = (i < picks.length-1) ? Math.max(start + 2, picks[i+1].start) : Math.max(start + 3, lastTime);
+      segments.push({start, end, score: picks[i].score});
+    }
+
+    // Smooth: ensure min 2s, merge tiny segments
+    const MIN_DUR = 2;
+    for(let i=0;i<segments.length;i++){
+      if(segments[i].end - segments[i].start < MIN_DUR){
+        const delta = MIN_DUR - (segments[i].end - segments[i].start);
+        segments[i].end = Math.min(lastTime, segments[i].end + delta);
+        if(i<segments.length-1) segments[i+1].start = Math.max(segments[i+1].start, segments[i].end);
       }
     }
 
-    async function processFiles() {
-      await loadFFmpeg();
+    return segments;
+  }
 
-      // convert audio to wav
-      audioFile = audioInput.files[0];
-      pdfFile = pdfInput.files[0];
-      if (!audioFile || !pdfFile) {
-        setProgress("Please upload both PDF and audio!");
+  function fillAlignmentTable(segments){
+    const tbody = document.querySelector('#alignTable tbody');
+    tbody.innerHTML = '';
+    segments.forEach((s, i)=>{
+      const tr=document.createElement('tr');
+      const dur = Math.max(0, s.end - s.start);
+      tr.innerHTML = `<td>${i+1}</td>
+        <td>${seconds(s.start)}</td>
+        <td>${seconds(s.end)}</td>
+        <td>${seconds(dur)}s</td>
+        <td class="${s.score>0?'':'muted'}">${s.score>0?('★'.repeat(Math.min(5, s.score))):'low'}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function srtFromSegments(segments){
+    const toTS = (sec)=>{
+      const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=Math.floor(sec%60), ms=Math.floor((sec%1)*1000);
+      const pad=(n,w=2)=> String(n).padStart(w,'0');
+      return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms,3)}`;
+    }
+    return segments.map((s,i)=> `${i+1}\n${toTS(s.start)} --> ${toTS(s.end)}\nPage ${i+1}\n`).join('\n');
+  }
+
+  // ------------------------------
+  // Global state
+  // ------------------------------
+  const state = {
+    pdf: null,
+    pages: [],          // { idx, text, keywords, bitmap }
+    audioFile: null,
+    transcriptBlocks: null,
+    transcriptWords: null, // [{word,start,end}]
+    segments: null,
+    video: { width:1920, height:1080, fps:30, fadeMs:500 },
+    recording: false,
+    blobs: { webm:null, mp4:null }
+  };
+
+  // ------------------------------
+  // PDF loading + OCR
+  // ------------------------------
+  async function loadPDF(file){
+    setStatus('Loading PDF…');
+    const pdfBytes = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+    state.pdf = pdf;
+
+    const [W,H] = document.getElementById('resolution').value.split('x').map(n=>parseInt(n,10));
+    state.video.width = W; state.video.height = H; state.video.fps=30;
+
+    state.pages = [];
+    for(let i=1;i<=pdf.numPages;i++){
+      setStatus(`Rendering page ${i}/${pdf.numPages}…`);
+      setProgress(i/pdf.numPages*0.25);
+      const page = await pdf.getPage(i);
+      // Render at base scale 2 for decent OCR
+      const viewport = page.getViewport({ scale: 2 });
+      const off = document.createElement('canvas');
+      off.width = Math.floor(viewport.width);
+      off.height = Math.floor(viewport.height);
+      const offctx = off.getContext('2d', { willReadFrequently:true });
+      await page.render({ canvasContext: offctx, viewport }).promise;
+
+      // Try extract text; if empty/low, do OCR
+      let text='';
+      try{
+        const tc = await page.getTextContent();
+        text = tc.items.map(it=>it.str).join(' ');
+      }catch(e){ /* ignore */ }
+      if(!text || text.replace(/\s/g,'').length < 12){
+        setStatus(`OCR page ${i}/${pdf.numPages}…`);
+        const { data:{ text: ocrText } } = await Tesseract.recognize(off, 'eng', { logger: m=>{ if(m.status==='recognizing text') setProgress(0.25 + (i/pdf.numPages)*0.5 * (m.progress||0)); } });
+        text = ocrText || '';
+      }
+
+      // Scale for video width (top-aligned fill). We'll pre-create ImageBitmap.
+      const scale = state.video.width / off.width;
+      const scaled = document.createElement('canvas');
+      scaled.width = Math.floor(off.width * scale);
+      scaled.height = Math.floor(off.height * scale);
+      const sctx = scaled.getContext('2d');
+      sctx.drawImage(off, 0, 0, scaled.width, scaled.height);
+      const bitmap = await createImageBitmap(scaled);
+
+      const keywords = topKeywords(text, 30);
+      state.pages.push({ idx:i, text, keywords, bitmap, bmpW:scaled.width, bmpH:scaled.height });
+    }
+  }
+
+  // ------------------------------
+  // Transcription (ASR) using Transformers.js Whisper tiny.en
+  // ------------------------------
+  async function transcribeAudio(file){
+    setStatus('Transcribing audio (English)… Model: whisper-tiny.en');
+    setProgress(0.8*0.25 + 0.25); // bump
+
+    // If transcript file provided, parse and derive words as fallback later
+    if(state.transcriptBlocks){
+      setStatus('Using uploaded transcript to guide alignment…');
+      return { words: null };
+    }
+
+    const asr = window.__USERIFIC_ASR__;
+    if(!asr){
+      setStatus('ASR model not loaded. Upload transcript file instead.');
+      return { words:null };
+    }
+
+    // Transformers.js accepts File directly
+    const out = await asr(file, {
+      // get per-word timestamps for alignment
+      return_timestamps: 'word',
+      chunk_length_s: 30,
+      stride_length_s: 5,
+    });
+
+    // Normalize words array
+    const words = (out.chunks || out.words || []).map(w=>({
+      word: (w.text || w.word || '').toLowerCase().replace(/[^a-z0-9]/g,''),
+      start: w.timestamp ? (Array.isArray(w.timestamp) ? w.timestamp[0] : w.start) : w.start,
+      end: w.timestamp ? (Array.isArray(w.timestamp) ? w.timestamp[1] : w.end) : w.end,
+    })).filter(w=> w.word && isFinite(w.start) && isFinite(w.end));
+
+    return { words };
+  }
+
+  // ------------------------------
+  // Derive words from transcript file (approximate; split blocks)
+  // ------------------------------
+  function wordsFromTranscriptBlocks(blocks){
+    const words=[];
+    for(const b of blocks){
+      const tokens = tokenize(b.text);
+      const dur = (b.end!=null && b.end>b.start) ? (b.end-b.start) : Math.max(2, tokens.length*0.4);
+      const step = dur / Math.max(1, tokens.length);
+      for(let i=0;i<tokens.length;i++){
+        const t0 = (b.start||0) + i*step;
+        words.push({ word: tokens[i], start: t0, end: t0+step });
+      }
+    }
+    return words;
+  }
+
+  // ------------------------------
+  // ANALYZE button handler
+  // ------------------------------
+  const pdfInput = document.getElementById('pdfInput');
+  const audioInput = document.getElementById('audioInput');
+  const transcriptInput = document.getElementById('transcriptInput');
+  const fadeMsInput = document.getElementById('fadeMs');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  const renderBtn = document.getElementById('renderBtn');
+  const stopBtn = document.getElementById('stopBtn');
+
+  transcriptInput.addEventListener('change', async (e)=>{
+    const f = e.target.files[0];
+    if(!f) return; const txt = await f.text();
+    state.transcriptBlocks = parseTranscript(txt);
+    setStatus(`Loaded transcript with ${state.transcriptBlocks.length} block(s).`);
+  });
+
+  analyzeBtn.addEventListener('click', async ()=>{
+    const pdfFile = pdfInput.files[0];
+    const audioFile = audioInput.files[0];
+    if(!pdfFile || !audioFile){ alert('Upload both PDF and audio.'); return; }
+
+    // Update video resolution
+    const [W,H] = document.getElementById('resolution').value.split('x').map(n=>parseInt(n,10));
+    state.video.width=W; state.video.height=H; state.video.fps=30; state.video.fadeMs=parseInt(fadeMsInput.value||'500',10);
+
+    // Reset UI
+    setProgress(0);
+    renderBtn.disabled = true; stopBtn.disabled = true; state.segments=null; state.blobs.webm=null; state.blobs.mp4=null;
+
+    try{
+      await loadPDF(pdfFile);
+      setProgress(0.4);
+      state.audioFile = audioFile;
+
+      let words=null;
+      if(state.transcriptBlocks){
+        words = wordsFromTranscriptBlocks(state.transcriptBlocks);
+      } else {
+        const { words: w } = await transcribeAudio(audioFile);
+        words = w;
+      }
+
+      if(!words || !words.length){
+        setStatus('No ASR words available. Falling back to equal-duration segmentation.');
+        // Get audio duration via WebAudio
+        const audDur = await getAudioDuration(audioFile);
+        const avg = audDur / state.pages.length;
+        state.segments = Array.from({length: state.pages.length}, (_,i)=> ({ start: i*avg, end: (i+1)*avg, score:0 }));
+      } else {
+        // Create per-page objects
+        const pages = state.pages.map(p=> ({ idx:p.idx, keywords: p.keywords, rawText: p.text }));
+        const segments = alignPagesByKeywords(pages, words);
+        state.segments = segments;
+      }
+
+      fillAlignmentTable(state.segments);
+      setStatus('Analysis complete. Ready to render.');
+      setProgress(1);
+      renderBtn.disabled = false;
+    }catch(err){
+      console.error(err);
+      setStatus('Failed during analysis: '+err.message);
+    }
+  });
+
+  // ------------------------------
+  // Audio helpers (decode, duration, normalization)
+  // ------------------------------
+  async function getAudioBuffer(file, { normalize=true, mono=true }={}){
+    const ac = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(mono?1:2, 48000 * 10, 48000);
+    // Above creates a tiny context; we'll decode via regular AudioContext to get entire buffer reliably
+    const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    const arr = await file.arrayBuffer();
+    const buf = await ctx.decodeAudioData(arr);
+
+    // Convert sample rate / channels via OfflineAudioContext
+    const outCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(mono?1:Math.min(2,buf.numberOfChannels), Math.ceil(buf.duration*48000), 48000);
+    const src = outCtx.createBufferSource(); src.buffer = buf;
+    let node = src;
+    if(normalize){
+      // Simple peak normalization
+      const gain = outCtx.createGain();
+      const peak = getPeak(buf);
+      gain.gain.value = peak > 0 ? Math.min(1.0/peak, 4.0) : 1;
+      node.connect(gain); node = gain;
+    }
+    node.connect(outCtx.destination);
+    src.start(0);
+    const rendered = await outCtx.startRendering();
+    return rendered;
+  }
+
+  function getPeak(buf){
+    let peak=0; for(let ch=0; ch<buf.numberOfChannels; ch++){
+      const d = buf.getChannelData(ch); for(let i=0;i<d.length;i++){ const a=Math.abs(d[i]); if(a>peak) peak=a; }
+    } return peak;
+  }
+
+  async function getAudioDuration(file){
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const arr = await file.arrayBuffer();
+    const buf = await ctx.decodeAudioData(arr);
+    return buf.duration;
+  }
+
+  // ------------------------------
+  // RENDER VIDEO with CanvasCaptureStream + MediaRecorder (real-time)
+  // ------------------------------
+  const stage = document.getElementById('stage');
+  const sctx = stage.getContext('2d');
+
+  async function renderVideo(){
+    if(!state.pages.length || !state.segments){ alert('Run Analyze first.'); return; }
+
+    const width = state.video.width, height = state.video.height, fps = state.video.fps, fadeMs = state.video.fadeMs;
+    stage.width = width; stage.height = height;
+
+    // Prepare audio to play via WebAudio and to record via MediaStreamDestination
+    const wantNormalize = document.getElementById('normalizeAudio').checked;
+    const wantMono = document.getElementById('monoAudio').checked;
+    setStatus('Preparing audio…');
+    const audioBuf = await getAudioBuffer(state.audioFile, { normalize: wantNormalize, mono: wantMono });
+
+    const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
+    const src = ac.createBufferSource(); src.buffer = audioBuf;
+    const dest = ac.createMediaStreamDestination();
+    src.connect(dest); // route to recording stream only (avoid feedback)
+
+    // Compose combined stream: canvas video + audio
+    const canvasStream = stage.captureStream(fps);
+    const mixed = new MediaStream([ canvasStream.getVideoTracks()[0], ...dest.stream.getAudioTracks() ]);
+
+    // MediaRecorder (WEBM)
+    const rec = new MediaRecorder(mixed, { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: width*height < 2e6 ? 4_000_000 : 8_000_000 });
+    const chunks=[]; rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = ()=>{
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      state.blobs.webm = blob;
+      document.getElementById('downloadWebmBtn').disabled = false;
+      document.getElementById('toMp4Btn').disabled = false;
+      setStatus('Render complete. You can download WEBM or convert to MP4.');
+    };
+
+    // Animation: drive pages based on AudioContext time
+    const startAt = ac.currentTime + 0.2; // small delay
+    const t0 = startAt;
+    const segments = state.segments.map(s=> ({ start:s.start, end:s.end, score:s.score }));
+    const totalDur = segments.length ? segments[segments.length-1].end : audioBuf.duration;
+
+    let rafId=null; let stopped=false;
+    stopBtn.onclick = ()=>{ stopped=true; try{ rec.stop(); }catch{} };
+
+    const drawFrame = ()=>{
+      if(stopped) return;
+      const now = ac.currentTime;
+      const t = Math.max(0, now - t0);
+      // Clear
+      sctx.fillStyle = '#000';
+      sctx.fillRect(0,0,width,height);
+
+      // Determine current page index
+      let idx = Math.max(0, segments.findIndex(seg=> t>=seg.start && t<seg.end));
+      if(idx === -1){ idx = segments.length-1; }
+
+      // Fade logic
+      const seg = segments[idx];
+      const prev = idx>0 ? segments[idx-1] : null;
+      const next = idx<segments.length-1 ? segments[idx+1] : null;
+
+      const fade = fadeMs/1000;
+      let alpha=1;
+      if(t - seg.start < fade) alpha = Math.max(0, Math.min(1, (t - seg.start)/fade)); // fade-in
+      if(seg.end - t < fade) alpha = Math.max(0, Math.min(alpha, (seg.end - t)/fade));   // fade-out
+
+      // Draw page bitmap top-aligned fill to width; crop bottom if taller than video height
+      const page = state.pages[idx];
+      const imgW = page.bmpW, imgH = page.bmpH;
+      // image already scaled to video width; top-left at (0,0)
+      sctx.save();
+      sctx.globalAlpha = alpha;
+      sctx.drawImage(page.bitmap, 0, 0, imgW, imgH);
+      sctx.restore();
+
+      // Hard crop at bottom if needed
+      // (Canvas naturally clips to stage size.)
+
+      // Progress bar overlay (small)
+      const prog = Math.min(1, t / totalDur);
+      sctx.fillStyle = 'rgba(255,255,255,0.08)';
+      sctx.fillRect(0, height-6, width, 6);
+      sctx.fillStyle = '#66ffa6';
+      sctx.fillRect(0, height-6, width*prog, 6);
+
+      if(t >= totalDur + 0.05){
+        // Stop recording
+        try{ rec.stop(); }catch{}
+        cancelAnimationFrame(rafId);
         return;
       }
+      rafId = requestAnimationFrame(drawFrame);
+    };
 
-      setProgress("Converting audio...");
-      ffmpeg.FS("writeFile", "input", await fetchFile(audioFile));
-      await ffmpeg.run("-i", "input", "-ar", "44100", "-ac", "2", "audio.wav");
-      audioWav = ffmpeg.FS("readFile", "audio.wav");
-      setProgress("Audio converted ✅");
+    // Start
+    rec.start(1000);
+    src.start(startAt);
+    drawFrame();
 
-      // render PDF to canvases
-      const pdfData = await pdfFile.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-      pdfPages = [];
+    setStatus('Rendering video in real-time… Do not leave this tab.');
+    stopBtn.disabled = false;
+  }
 
-      for (let i = 1; i <= pdf.numPages; i++) {
-        setProgress(`Rendering page ${i}/${pdf.numPages}...`);
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: ctx, viewport }).promise;
+  // Buttons
+  renderBtn.addEventListener('click', ()=>{
+    renderBtn.disabled = true;
+    stopBtn.disabled = false;
+    renderVideo();
+  });
 
-        // OCR if page has no text
-        const textContent = await page.getTextContent();
-        if (textContent.items.length === 0) {
-          setProgress(`Running OCR on page ${i}...`);
-          await Tesseract.recognize(canvas, "eng");
-        }
+  // Download WEBM
+  document.getElementById('downloadWebmBtn').addEventListener('click', ()=>{
+    if(!state.blobs.webm) return;
+    const a=document.createElement('a'); a.href = URL.createObjectURL(state.blobs.webm); a.download = 'userific-video.webm'; a.click();
+  });
 
-        pdfPages.push(canvas.toDataURL("image/png"));
-      }
+  // ------------------------------
+  // Convert WEBM → MP4 using ffmpeg.wasm
+  // ------------------------------
+  const toMp4Btn = document.getElementById('toMp4Btn');
+  const downloadMp4Btn = document.getElementById('downloadMp4Btn');
 
-      setProgress("PDF rendered ✅ Ready to export.");
-    }
+  toMp4Btn.addEventListener('click', async ()=>{
+    if(!state.blobs.webm){ alert('Render first to get WEBM.'); return; }
+    setStatus('Loading ffmpeg.wasm… (one-time)');
+    setProgress(0);
 
-    async function exportVideo() {
-      if (!pdfPages.length || !audioWav) {
-        setProgress("Please process files first!");
-        return;
-      }
-      await loadFFmpeg();
-
-      const res = parseInt(resInput.value);
-      const height = res;
-      const width = Math.floor((16 / 9) * height);
-      const pageDuration = 5; // seconds per page for demo
-      const fps = 30;
-
-      setProgress("Creating frames...");
-      pdfPages.forEach((imgData, i) => {
-        const img = atob(imgData.split(",")[1]);
-        const buf = new Uint8Array(img.length);
-        for (let j = 0; j < img.length; j++) buf[j] = img.charCodeAt(j);
-        ffmpeg.FS("writeFile", `page${i}.png`, buf);
+    try{
+      const { FFmpeg } = window.FFmpeg;
+      const { fetchFile } = window.FFmpegUtil || window.ffmpegUtil || window.FFmpegUtilUmd || window.FFmpegUtil;
+      const ffmpeg = new FFmpeg();
+      await ffmpeg.load({
+        coreURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/ffmpeg-core.js',
+        wasmURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/ffmpeg-core.wasm',
+        workerURL: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/ffmpeg-core.worker.js',
       });
 
-      setProgress("Encoding video...");
-      await ffmpeg.run(
-        "-framerate", String(fps),
-        "-i", "page%d.png",
-        "-i", "audio.wav",
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-s", `${width}x${height}`,
-        "out.mp4"
-      );
+      setStatus('Converting to MP4 (H.264 + AAC)…');
+      const data = await fetchFile(state.blobs.webm);
+      await ffmpeg.writeFile('in.webm', data);
 
-      const data = ffmpeg.FS("readFile", "out.mp4");
-      const url = URL.createObjectURL(new Blob([data.buffer], { type: "video/mp4" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "output.mp4";
-      a.click();
-      setProgress("Export complete ✅");
+      // Transcode both video and audio to compatible codecs
+      // We also set constant frame rate and yuv420p for compatibility.
+      await ffmpeg.exec([
+        '-i','in.webm',
+        '-r','30',
+        '-pix_fmt','yuv420p',
+        '-c:v','libx264','-preset','medium','-crf','22',
+        '-c:a','aac','-b:a','160k',
+        'out.mp4'
+      ]);
+
+      const mp4Data = await ffmpeg.readFile('out.mp4');
+      const blob = new Blob([mp4Data.buffer], { type:'video/mp4' });
+      state.blobs.mp4 = blob;
+      downloadMp4Btn.disabled = false;
+      setStatus('MP4 ready to download.');
+    } catch(err){
+      console.error(err);
+      setStatus('MP4 conversion failed. You can still use the WEBM file.');
     }
+  });
 
-    document.getElementById("processBtn").onclick = processFiles;
-    document.getElementById("exportBtn").onclick = exportVideo;
-  </script>
-</body>
-</html>
+  downloadMp4Btn.addEventListener('click', ()=>{
+    if(!state.blobs.mp4) return;
+    const a=document.createElement('a'); a.href = URL.createObjectURL(state.blobs.mp4); a.download = 'userific-video.mp4'; a.click();
+  });
+
+  </script></body>
+  </html>
