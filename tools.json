@@ -5,8 +5,8 @@
     "description": "Convert PDF files into high-resolution PNG images."
   },
   {
-    "name": "Silence Remover",
-    "slug": "silence-remover",
-    "description": "Remove silence from audio files like MP3/WAV. Perfect for podcasts, voiceovers and music editing."
+    "name": "PNG/JPEG Compressor",
+    "slug": "png/jpeg-compressor",
+    "description": "Compress PNG & JPEG images by quality or target size."
   }
 ]
