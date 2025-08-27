@@ -8,5 +8,10 @@
     "name": "PNG/JPEG Compressor",
     "slug": "png-jpeg-compressor",
     "description": "Compress PNG & JPEG images by quality or target size."
+  },
+  {
+    "name": "Silence-Remover",
+    "slug": "silence-remover",
+    "description": "Remove silence from audio file."
   }
 ]
