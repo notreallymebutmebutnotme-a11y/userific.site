@@ -13,5 +13,10 @@
     "name": "Silence-Remover",
     "slug": "silence-remover",
     "description": "Remove silence from audio file."
+    },
+  {
+    "name": "Html-to-Png",
+    "slug": "html-to-png",
+    "description": "Convert Html Code To Image."
   }
 ]
