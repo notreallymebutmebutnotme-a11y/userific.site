@@ -18,5 +18,10 @@
     "name": "Html-to-Png",
     "slug": "html-to-png",
     "description": "Convert Html Code To Image."
+  },
+  {
+    "name": "Html-to-Gif",
+    "slug": "html-to-gif",
+    "description": "Convert Html Code To Gif."
   }
 ]
