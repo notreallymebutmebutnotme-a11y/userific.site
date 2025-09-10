@@ -23,5 +23,10 @@
     "name": "Html-to-Gif",
     "slug": "html-to-gif",
     "description": "Convert Html Code To Gif."
+    },
+  {
+  "name": "Text-Counter",
+    "slug": "text-counter",
+    "description": "Text Characters Counter."
   }
 ]
