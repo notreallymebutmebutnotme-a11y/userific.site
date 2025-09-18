@@ -97,8 +97,15 @@
     const scaleSelect=document.getElementById("scaleSelect");
     const output=document.getElementById("output");
     let renderedImages=[];
+    let pdfBaseName="pdf"; // default
 
-    pdfInput.addEventListener("change",()=>{convertBtn.disabled=!pdfInput.files.length;});
+    pdfInput.addEventListener("change",()=>{
+      convertBtn.disabled=!pdfInput.files.length;
+      if(pdfInput.files.length){
+        let fullName=pdfInput.files[0].name;
+        pdfBaseName=fullName.split(".").slice(0,-1).join("."); // remove extension
+      }
+    });
 
     convertBtn.addEventListener("click",async()=>{
       if(!pdfInput.files.length) return;
@@ -141,8 +148,10 @@
         const base64=img.dataUrl.split(",")[1];
         zip.file(img.name,base64,{base64:true});
       });
+      // Take first 5 letters of pdf name (fallback to 'pdf')
+      let shortName=(pdfBaseName||"pdf").substring(0,5);
       zip.generateAsync({type:"blob"}).then(content=>{
-        saveAs(content,"pdf-pages.zip");
+        saveAs(content,`${shortName}-pages.zip`);
       });
     });
   </script>
