@@ -15,7 +15,7 @@
     "description": "Remove silence from audio file."
     },
   {
-    "name": "Html-to-Png",
+    "name": "Html-to-PNG",
     "slug": "html-to-png",
     "description": "Convert Html Code To Image."
   },
@@ -28,5 +28,10 @@
   "name": "Text-Counter",
     "slug": "text-counter",
     "description": "Text Characters Counter."
+  },
+  {
+  "name": "Bulk-PDF-to-PNG",
+    "slug": "bulk-pdf-to-png",
+    "description": "Covert multiple PDF to PNG at Once."
   }
 ]
