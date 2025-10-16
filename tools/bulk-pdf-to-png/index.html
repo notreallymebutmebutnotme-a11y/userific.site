@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulk PDF to PNG Converter – Free Online Tool</title>
+  <meta name="description" content="Convert multiple PDF files into high-quality PNG images. Each PDF is processed and packaged into its own separate ZIP file for easy download.">
+  <meta name="keywords" content="bulk pdf to png, multiple pdf to png, pdf to images, pdf to zip, free pdf converter, online pdf tool">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <!-- pdf.js is used to read and render PDF files -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- jszip.js is used for creating the ZIP archives -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --gradient-dark: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      --gradient-light: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      --card-dark: rgba(30,30,30,0.85);
+      --card-light: rgba(255,255,255,0.9);
+      --text-dark: #f5f5f5;
+      --text-light: #111;
+      --primary: #2a7cff;
+      --success: #28a745;
+      --border-dark: #444;
+      --border-light: #ddd;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+    body{min-height:100vh;background:var(--gradient-dark);color:var(--text-dark);transition: background 0.3s, color 0.3s;}
+    body.light{background:var(--gradient-light);color:var(--text-light);}
+    header{display:flex;justify-content:space-between;align-items:center;padding:1rem 2rem;}
+    header a{text-decoration:none;color:inherit;font-size:1.6rem;font-weight:700;}
+    main{max-width:900px;margin:1rem auto;padding:1rem;}
+    h1{font-size:1.8rem;margin-bottom:0.5rem;text-align:center;}
+    p.desc{text-align:center;margin-bottom:1.5rem;}
+    .card{background:var(--card-dark);border-radius:16px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+    body.light .card{background:var(--card-light);}
+    label{display:block;font-size:0.9rem;margin:12px 0 6px;}
+    input[type=file], select, button{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border-dark);font-size:1rem;margin-bottom:12px; background-color: rgba(255,255,255,0.1);}
+    body.light input[type=file], body.light select, body.light button {border-color: var(--border-light); background-color: transparent;}
+    select, input { color: var(--text-dark); }
+    body.light select, body.light input { color: var(--text-light); }
+    select option { background: var(--card-dark); color: var(--text-dark); }
+    body.light select option { background: var(--card-light); color: var(--text-light); }
+
+    button{background:var(--primary);color:#fff;font-weight:600;cursor:pointer;border:none;}
+    button:disabled{opacity:0.6;cursor:not-allowed;}
+    .status { text-align: center; margin-top: 1rem; font-weight: 600; min-height: 1.5em; }
+    #output{margin-top:1.5rem;display:flex;flex-direction:column;gap:0.75rem;}
+    .result-item {
+        padding: 12px 16px;
+        border: 1px solid var(--border-dark);
+        border-radius: 8px;
+        background: rgba(0,0,0,0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    body.light .result-item {
+        border-color: var(--border-light);
+        background: rgba(255,255,255,0.5);
+    }
+    .result-item.error {
+        background-color: rgba(255,0,0,0.2);
+        border-color: red;
+        justify-content: center;
+    }
+    .result-item span {
+        word-break: break-all;
+        padding-right: 1rem;
+        flex-grow: 1;
+    }
+    .result-item a {
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 6px;
+        background: var(--success);
+        transition: background 0.2s;
+        flex-shrink: 0;
+    }
+    .result-item a:hover {
+        opacity: 0.9;
+    }
+    footer{text-align:center;padding:1rem;font-size:0.85rem;margin-top:2rem;}
+  </style>
+</head>
+<body class="dark">
+  <header>
+    <div>
+      <a>Bulk PDF Tools</a>
+    </div>
+    <div class="toggle" id="themeToggle">☀️</div>
+  </header>
+
+  <main>
+    <h1>Bulk PDF to PNG Converter</h1>
+    <p class="desc">Select multiple PDF files. Each file will be converted into PNG images and packaged in its own separate ZIP archive.</p>
+
+    <div class="card">
+      <label for="pdfFiles">Choose PDF files</label>
+      <input type="file" id="pdfFiles" accept="application/pdf" multiple />
+
+      <label for="scaleSelect">Image Quality (Scale)</label>
+      <select id="scaleSelect">
+        <option value="1">Standard (1x)</option>
+        <option value="1.5">High (1.5x)</option>
+        <option value="2" selected>Very High (2x)</option>
+        <option value="4">Ultra (4x)</option>
+      </select>
+
+      <button id="convertBtn" disabled>Convert PDF(s) to ZIP(s)</button>
+      <div class="status" id="status"></div>
+      <div id="output"></div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; <span id="year"></span> All Rights Reserved</p>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+    const themeToggle = document.getElementById("themeToggle");
+    themeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("light");
+      themeToggle.textContent = document.body.classList.contains("light") ? '🌙' : '☀️';
+    });
+
+    const pdfInput = document.getElementById("pdfFiles");
+    const scaleSelect = document.getElementById("scaleSelect");
+    const convertBtn = document.getElementById("convertBtn");
+    const output = document.getElementById("output");
+    const status = document.getElementById("status");
+
+    pdfInput.addEventListener("change", () => {
+      convertBtn.disabled = !pdfInput.files.length;
+      output.innerHTML = "";
+      status.textContent = "";
+    });
+
+    convertBtn.addEventListener("click", async () => {
+      const files = pdfInput.files;
+      if (files.length === 0) return;
+
+      convertBtn.disabled = true;
+      convertBtn.textContent = 'Processing...';
+      output.innerHTML = "";
+      status.textContent = `Starting process for ${files.length} file(s)...`;
+
+      // We process each file one by one to avoid overwhelming the browser
+      for (const file of files) {
+        try {
+          const pdfBaseName = file.name.endsWith('.pdf') ? file.name.slice(0, -4) : file.name;
+          status.textContent = `Processing: ${file.name}`;
+
+          // --- 1. CONVERT PDF PAGES TO PNGs ---
+          const fileUrl = URL.createObjectURL(file);
+          const pdf = await pdfjsLib.getDocument(fileUrl).promise;
+          const totalPages = pdf.numPages;
+          const scale = parseFloat(scaleSelect.value);
+          const renderedImages = [];
+
+          for (let i = 1; i <= totalPages; i++) {
+            status.textContent = `Converting ${file.name} (page ${i} of ${totalPages})`;
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale });
+
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport }).promise;
+            const dataUrl = canvas.toDataURL("image/png");
+            renderedImages.push({ name: `${pdfBaseName}-page-${i}.png`, dataUrl });
+          }
+
+          // --- 2. ZIP THE GENERATED PNGs ---
+          status.textContent = `Zipping images for: ${file.name}`;
+          const zip = new JSZip();
+          renderedImages.forEach(img => {
+            const base64Data = img.dataUrl.split(',')[1];
+            zip.file(img.name, base64Data, { base64: true });
+          });
+          const content = await zip.generateAsync({ type: "blob" });
+
+          // --- 3. CREATE AND DISPLAY DOWNLOAD LINK ---
+          const zipFileName = `${pdfBaseName}-pages.zip`;
+          const downloadUrl = URL.createObjectURL(content);
+
+          const resultDiv = document.createElement('div');
+          resultDiv.className = 'result-item';
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = `${file.name} (${totalPages} pages)`;
+          
+          const downloadLink = document.createElement('a');
+          downloadLink.href = downloadUrl;
+          downloadLink.download = zipFileName;
+          downloadLink.textContent = `Download ZIP`;
+
+          resultDiv.appendChild(nameSpan);
+          resultDiv.appendChild(downloadLink);
+          output.appendChild(resultDiv);
+
+        } catch (error) {
+          console.error(`Failed to process ${file.name}:`, error);
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'result-item error';
+          errorDiv.textContent = `❌ Failed to process: ${file.name}`;
+          output.appendChild(errorDiv);
+        }
+      }
+
+      status.textContent = `✅ Process Complete!`;
+      convertBtn.disabled = false;
+      convertBtn.textContent = 'Convert PDF(s) to ZIP(s)';
+    });
+  </script>
+</body>
+</html>
