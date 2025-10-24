@@ -30,8 +30,8 @@
     "description": "Text Characters Counter."
   },
   {
-  "name": "Bulk-PDF-to-PNG",
-    "slug": "bulk-pdf-to-png",
-    "description": "Covert multiple PDF to PNG at Once."
+  "name": "PPTX-to-PDF",
+    "slug": "pptx-to-pdf",
+    "description": "Covert PPTX to PDF at Full HD Resolution."
   }
 ]
