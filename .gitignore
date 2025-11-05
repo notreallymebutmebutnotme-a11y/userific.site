@@ -1,0 +1,63 @@
+# Added by Android Studio
+*.apk
+*.ap_
+*.aab
+*.iml
+*.ipr
+*.iws
+*.idea
+.gradle
+.idea
+build
+local.properties
+.DS_Store
+/captures
+
+# Android Studio 3.1+
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+
+# Mac
+.DS_Store
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# Gradle
+.gradle/
+build/
+local.properties
+/build
+
+# Buck
+/buck-out
+/.buckd
+
+# fastlane
+/fastlane/report.xml
+/fastlane/Preview.html
+/fastlane/screenshots
+/fastlane/test_output
+
+# Google Services
+google-services.json
+
+# Proguard
+proguard/
+
+# Keystore
+*.jks
+*.keystore
+
+# Log files
+*.log

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/homeFragment">
+
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="com.onefocus.app.home.HomeFragment"
+        android:label="fragment_home"
+        tools:layout="@layout/fragment_home" >
+        <action
+            android:id="@+id/action_homeFragment_to_taskStartFragment"
+            app:destination="@id/taskStartFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/taskStartFragment"
+        android:name="com.onefocus.app.task.TaskStartFragment"
+        android:label="fragment_task_start"
+        tools:layout="@layout/fragment_task_start" >
+        <action
+            android:id="@+id/action_taskStartFragment_to_focusSessionFragment"
+            app:destination="@id/focusSessionFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/focusSessionFragment"
+        android:name="com.onefocus.app.task.FocusSessionFragment"
+        android:label="fragment_focus_session"
+        tools:layout="@layout/fragment_focus_session" >
+        <action
+            android:id="@+id/action_focusSessionFragment_to_sessionCompleteFragment"
+            app:destination="@id/sessionCompleteFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+        <action
+            android:id="@+id/action_focusSessionFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/sessionCompleteFragment"
+        android:name="com.onefocus.app.task.SessionCompleteFragment"
+        android:label="fragment_session_complete"
+        tools:layout="@layout/fragment_session_complete" >
+        <action
+            android:id="@+id/action_sessionCompleteFragment_to_adFragment"
+            app:destination="@id/adFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/adFragment"
+        android:name="com.onefocus.app.task.AdFragment"
+        android:label="fragment_ad"
+        tools:layout="@layout/fragment_ad" >
+        <action
+            android:id="@+id/action_adFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/signUpFragment"
+        android:name="com.onefocus.app.auth.SignUpFragment"
+        android:label="fragment_sign_up"
+        tools:layout="@layout/fragment_sign_up" >
+        <action
+            android:id="@+id/action_signUpFragment_to_homeFragment"
+            app:destination="@id/homeFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/forgotPasswordFragment"
+        android:name="com.onefocus.app.auth.ForgotPasswordFragment"
+        android:label="fragment_forgot_password"
+        tools:layout="@layout/fragment_forgot_password" />
+    <fragment
+        android:id="@+id/statsFragment"
+        android:name="com.onefocus.app.stats.StatsFragment"
+        android:label="fragment_stats"
+        tools:layout="@layout/fragment_stats" >
+        <action
+            android:id="@+id/action_statsFragment_to_upgradeToProFragment"
+            app:destination="@id/upgradeToProFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.onefocus.app.settings.SettingsFragment"
+        android:label="fragment_settings"
+        tools:layout="@layout/fragment_settings" >
+        <action
+            android:id="@+id/action_settingsFragment_to_upgradeToProFragment"
+            app:destination="@id/upgradeToProFragment"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out" />
+    </fragment>
+    <fragment
+        android:id="@+id/upgradeToProFragment"
+        android:name="com.onefocus.app.settings.UpgradeToProFragment"
+        android:label="fragment_upgrade_to_pro"
+        tools:layout="@layout/fragment_upgrade_to_pro" />
+</navigation>
